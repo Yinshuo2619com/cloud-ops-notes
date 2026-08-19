@@ -2,7 +2,7 @@
 
 > 云计算运维工程师学习过程记录，涵盖腾讯云微专业认证培训内容与题库整理。
 
-[页面访问](https://yinshuo2619com.github.io/cloud-ops-notes/)
+[页面访问](https://yinshuo2619com.github.io/cloud-ops-notes/)`https://yinshuo2619com.github.io/cloud-ops-notes/`
 
 ## 学习内容
 
@@ -64,7 +64,7 @@ study/
 
 ## 使用方式
 
-直接打开 `index.html` 即可浏览学习内容和进行模拟练习。
+直接打开 `上述链接` 即可浏览学习内容和进行模拟练习。
 
 ## 学习目标
 
