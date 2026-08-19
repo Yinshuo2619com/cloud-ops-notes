@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术综合考试（第五套）</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术综合考试（第五套）</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"MySQL中，InnoDB存储引擎的特点是",o:["不支持事务", "支持事务和行级锁", "只支持表级锁", "不支持外键"],a:1,s:1},
+{type:"single",q:"MySQL中，VARCHAR(100)表示",o:["固定占用100字节", "最多存储100个字符", "只能存储100个数字", "以上都不对"],a:1,s:1},
+{type:"single",q:"MySQL中，以下哪个不是SQL聚合函数",o:["COUNT", "SUM", "AVG", "WHERE"],a:3,s:1},
+{type:"single",q:"MySQL中，索引的缺点是",o:["加快查询", "占用额外存储空间", "提高安全性", "简化SQL"],a:1,s:1},
+{type:"single",q:"MySQL中，事务隔离级别中，可重复读的英文是",o:["Read Uncommitted", "Read Committed", "Repeatable Read", "Serializable"],a:2,s:1},
+{type:"single",q:"MySQL中，以下哪个命令用于查看表结构",o:["SHOW TABLES", "DESC table_name", "SELECT *", "SHOW DATABASES"],a:1,s:1},
+{type:"single",q:"MySQL中，LEFT JOIN的特点是",o:["只返回左表数据", "返回左表所有数据和右表匹配数据", "只返回右表数据", "返回两表交集"],a:1,s:1},
+{type:"single",q:"MySQL中，GROUP BY子句的作用是",o:["排序数据", "分组聚合数据", "过滤数据", "连接表"],a:1,s:1},
+{type:"single",q:"MySQL中，以下哪个不是数据类型",o:["INT", "VARCHAR", "BOOLEAN", "TABLE"],a:3,s:1},
+{type:"single",q:"MySQL中，AUTO_INCREMENT的作用是",o:["自动备份", "自动递增生成主键", "自动索引", "自动分区"],a:1,s:1},
+{type:"single",q:"云数据库MySQL高可用版的架构是",o:["单节点", "主从架构", "集群架构", "分布式架构"],a:1,s:1},
+{type:"single",q:"云数据库MySQL的只读实例数量上限是",o:["1个", "5个", "10个", "无限制"],a:2,s:1},
+{type:"single",q:"云数据库MySQL的备份策略中，全量备份的频率通常是",o:["每小时", "每天", "每周", "每月"],a:1,s:1},
+{type:"single",q:"云数据库MySQL的binlog日志的作用是",o:["数据加密", "数据恢复和主从复制", "数据压缩", "数据清理"],a:1,s:1},
+{type:"single",q:"云数据库MySQL的慢查询日志可以用于",o:["监控流量", "分析性能瓶颈", "数据备份", "权限管理"],a:1,s:1},
+{type:"single",q:"MySQL中，EXPLAIN命令的作用是",o:["执行SQL", "分析SQL执行计划", "创建表", "删除数据"],a:1,s:1},
+{type:"single",q:"MySQL中，以下哪个不是索引类型",o:["主键索引", "唯一索引", "全文索引", "随机索引"],a:3,s:1},
+{type:"single",q:"MySQL中，事务的原子性是指",o:["事务要么全部执行，要么全部不执行", "事务执行过程中不受干扰", "事务执行前后数据一致", "事务提交后永久生效"],a:0,s:1},
+{type:"single",q:"MySQL中，以下哪个命令用于创建索引",o:["CREATE INDEX", "ADD INDEX", "INSERT INDEX", "MAKE INDEX"],a:0,s:1},
+{type:"single",q:"云数据库MySQL的灾备实例位于",o:["同地域", "不同地域", "同可用区", "本地机房"],a:1,s:1},
+{type:"single",q:"MySQL中，UNION操作符的作用是",o:["连接表", "合并多个SELECT结果", "创建视图", "删除数据"],a:1,s:1},
+{type:"single",q:"MySQL中，HAVING子句的作用是",o:["过滤分组前数据", "过滤分组后数据", "排序数据", "分组数据"],a:1,s:1},
+{type:"single",q:"云数据库MySQL的连接数上限取决于",o:["数据库版本", "实例规格", "网络带宽", "存储空间"],a:1,s:1},
+{type:"single",q:"MySQL中，视图(View)的作用是",o:["存储数据", "简化复杂查询", "加速查询", "备份数据"],a:1,s:1},
+{type:"single",q:"云数据库MySQL的只读实例主要用于",o:["数据备份", "分担读取压力", "数据加密", "日志记录"],a:1,s:1},
+{type:"single",q:"Redis中，String类型的最大存储容量是",o:["1MB", "16MB", "512MB", "1GB"],a:2,s:1},
+{type:"single",q:"Redis中，Hash类型适合存储",o:["简单的键值对", "对象属性", "列表数据", "集合数据"],a:1,s:1},
+{type:"single",q:"Redis中，Set和List的区别是",o:["完全相同", "Set无序不重复，List有序可重复", "Set有序，List无序", "Set可重复，List不可重复"],a:1,s:1},
+{type:"single",q:"Redis中，Sorted Set的特点是",o:["无序", "有序且每个元素有分数", "不可重复", "没有分数"],a:1,s:1},
+{type:"single",q:"Redis持久化中，RDB的特点是",o:["实时保存", "定时快照保存", "只记录命令", "不支持持久化"],a:1,s:1},
+{type:"single",q:"Redis持久化中，AOF的特点是",o:["定时快照", "记录每个写操作命令", "只记录读操作", "不支持持久化"],a:1,s:1},
+{type:"single",q:"Redis中，过期键的删除策略不包括",o:["惰性删除", "定时删除", "定期删除", "立即删除"],a:3,s:1},
+{type:"single",q:"Redis中，Pipeline的作用是",o:["数据加密", "批量执行命令减少网络往返", "数据压缩", "负载均衡"],a:1,s:1},
+{type:"single",q:"Redis中，发布订阅模式的作用是",o:["数据存储", "消息通信", "数据加密", "数据备份"],a:1,s:1},
+{type:"single",q:"Redis集群中，数据分片使用的是",o:["一致性哈希", "哈希槽", "随机分配", "轮询分配"],a:1,s:1},
+{type:"single",q:"Redis集群中，总共有多少个哈希槽",o:["1024", "4096", "16384", "65536"],a:2,s:1},
+{type:"single",q:"Redis主从复制中，全量同步的过程是",o:["从节点发送SYNC，主节点生成RDB发送", "主节点主动推送数据", "通过第三方存储同步", "不需要同步"],a:0,s:1},
+{type:"single",q:"Redis哨兵(Sentinel)的作用是",o:["数据加密", "监控主从节点并自动故障转移", "数据备份", "负载均衡"],a:1,s:1},
+{type:"single",q:"Redis中，事务的命令是",o:["BEGIN/COMMIT", "MULTI/EXEC/AC", "START/END", "OPEN/CLOSE"],a:1,s:1},
+{type:"single",q:"Redis中，Lua脚本的作用是",o:["数据加密", "原子执行多个命令", "数据压缩", "网络优化"],a:1,s:1},
+{type:"single",q:"云数据库Redis的标准版支持",o:["集群部署", "主从部署", "分布式部署", "无副本部署"],a:1,s:1},
+{type:"single",q:"云数据库Redis的混合存储版的特点是",o:["只使用内存", "内存+磁盘混合存储", "只使用磁盘", "不支持持久化"],a:1,s:1},
+{type:"single",q:"Redis中，内存淘汰策略volatile-lru的作用是",o:["淘汰所有键中最近最少使用的", "淘汰设置了过期时间的键中最近最少使用的", "随机淘汰", "淘汰最大的键"],a:1,s:1},
+{type:"single",q:"Redis中，HyperLogLog的作用是",o:["精确计数", "基数估算（近似计数）", "数据排序", "数据加密"],a:1,s:1},
+{type:"single",q:"Redis中，Geo类型的作用是",o:["存储地理位置信息", "存储图片", "存储文件", "存储日志"],a:0,s:1},
+{type:"single",q:"COS中，Object的组成包括",o:["只有数据", "数据+元数据", "只有元数据", "只有键名"],a:1,s:1},
+{type:"single",q:"COS中，Bucket的命名要求是",o:["可以包含大写字母", "全局唯一", "长度不限", "可以包含中文"],a:1,s:1},
+{type:"single",q:"COS中，低频存储的最低存储时间是",o:["1天", "30天", "60天", "90天"],a:2,s:1},
+{type:"single",q:"COS中，归档存储的解冻时间通常是",o:["立即", "1分钟到几小时", "1-3天", "一周"],a:1,s:1},
+{type:"single",q:"COS中，跨地域复制的作用是",o:["数据加密", "数据备份到不同地域", "数据压缩", "数据清理"],a:1,s:1},
+{type:"single",q:"COS中，防盗链的作用是",o:["数据加密", "防止其他网站引用资源", "数据备份", "数据压缩"],a:1,s:1},
+{type:"single",q:"COS中，静态网站托管支持",o:["动态PHP", "静态HTML+CSS+JS", "Java应用", "Python应用"],a:1,s:1},
+{type:"single",q:"COS中，数据校验的方式是",o:["只支持MD5", "支持MD5和CRC32", "只支持SHA256", "不支持校验"],a:1,s:1},
+{type:"single",q:"COS中，批量操作的方式是",o:["只能逐个操作", "支持批量删除和复制", "只能批量删除", "不支持批量操作"],a:1,s:1},
+{type:"single",q:"COS中，临时密钥的作用是",o:["长期授权", "临时访问授权", "数据加密", "网络配置"],a:1,s:1},
+{type:"single",q:"CDN中，边缘节点的作用是",o:["存储数据", "缓存内容就近服务", "数据加密", "路由选择"],a:1,s:1},
+{type:"single",q:"CDN中，回源host的作用是",o:["指定源站地址", "指定回源时的Host头", "数据加密", "流量控制"],a:1,s:1},
+{type:"single",q:"CDN中，缓存过期时间的设置方式是",o:["全局统一", "可以按文件类型设置", "固定不变", "由源站决定"],a:1,s:1},
+{type:"single",q:"CDN中，URL预热的作用是",o:["清理缓存", "主动将资源缓存到边缘节点", "数据加密", "流量监控"],a:1,s:1},
+{type:"single",q:"CDN中，Range回源的作用是",o:["全量回源", "分片回源节省带宽", "数据加密", "负载均衡"],a:1,s:1},
+{type:"multi",q:"MySQL的存储引擎包括",o:["InnoDB", "MyISAM", "Memory", "CSV"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL的索引类型包括",o:["主键索引", "唯一索引", "普通索引", "全文索引"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL的事务特性(ACID)包括",o:["原子性", "一致性", "隔离性", "持久性"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL的备份方式包括",o:["物理备份", "逻辑备份", "增量备份", "差异备份"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL的连接方式包括",o:["内网连接", "公网连接", "SSL连接", "VPC连接"],a:[0, 1, 2],s:2},
+{type:"multi",q:"Redis的数据结构包括",o:["String", "List", "Hash", "Set"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis的持久化方式包括",o:["RDB", "AOF", "RDB+AOF混合", "RAID"],a:[0, 1, 2],s:2},
+{type:"multi",q:"Redis的部署架构包括",o:["单机", "主从", "哨兵", "集群"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis的应用场景包括",o:["缓存", "会话管理", "排行榜", "消息队列"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis的内存淘汰策略包括",o:["noeviction", "allkeys-lru", "volatile-lru", "allkeys-random"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的存储类型包括",o:["标准存储", "低频存储", "归档存储", "冷归档存储"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的访问方式包括",o:["控制台", "API", "SDK", "CLI"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的安全功能包括",o:["防盗链", "跨域设置", "服务端加密", "访问日志"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的数据管理功能包括",o:["生命周期", "跨地域复制", "批量操作", "数据索引"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN的核心组件包括",o:["边缘节点", "源站", "GSLB", "缓存策略"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN的缓存策略可以基于",o:["文件类型", "目录", "URL参数", "过期时间"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN的加速场景包括",o:["网站加速", "下载加速", "点播加速", "直播加速"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"云数据库MySQL的优势包括",o:["高可用", "弹性扩展", "自动备份", "安全防护"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"云数据库Redis的优势包括",o:["高性能", "高可用", "自动容灾", "数据持久化"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储COS的优势包括",o:["高可靠", "低成本", "无限容量", "多协议支持"],a:[0, 1, 2, 3],s:2}
+];
+;
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术综合考试（第五套） <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

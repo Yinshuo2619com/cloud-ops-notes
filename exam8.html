@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术考试（第八套）— CDN 网站加速</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术考试（第八套）— CDN 网站加速</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"CDN 的全称是",o:["Content Delivery Network", "Computer Data Network", "Cache Distribution Node", "Content Data Node"],a:0,s:1},
+{type:"single",q:"CDN 的核心原理可以概括为",o:["加密传输", "缓存与就近访问", "数据备份", "负载均衡"],a:1,s:1},
+{type:"single",q:"CDN 通过将内容发布到遍布全球的什么来实现加速",o:["源站服务器", "加速节点", "Local DNS", "用户终端"],a:1,s:1},
+{type:"single",q:"CDN 边缘节点是指",o:["源站服务器", "直接响应用户请求的节点", "调度系统", "中间缓存节点"],a:1,s:1},
+{type:"single",q:"CDN 中间源的作用是",o:["直接响应用户请求", "响应某一片地域所有边缘节点的请求", "进行域名解析", "存储源站原始数据"],a:1,s:1},
+{type:"single",q:"GSLB 在 CDN 中的作用是",o:["缓存用户数据", "智能调度并为请求分配最佳节点 IP", "提供源站带宽", "加密传输"],a:1,s:1},
+{type:"single",q:"CDN 加速时，用户请求解析域名会经过",o:["直接连接源站", "Local DNS → GSLB 调度", "VPN 隧道", "专线"],a:1,s:1},
+{type:"single",q:"CDN 接入时，源站域名一般会配置哪种解析记录指向 CDN 平台",o:["A 记录", "CNAME 记录", "MX 记录", "TXT 记录"],a:1,s:1},
+{type:"single",q:"当用户请求的资源在 CDN 节点已有缓存时，节点会",o:["回源拉取", "直接返回缓存数据", "拒绝响应", "跳转源站"],a:1,s:1},
+{type:"single",q:"当 CDN 节点未缓存用户请求的资源时，会",o:["返回 404", "向源站发起回源请求", "拒绝服务", "等待缓存"],a:1,s:1},
+{type:"single",q:"CDN 三级缓存架构的层级是",o:["浏览器→源站→DNS", "边缘节点→中间源→源站", "中间源→边缘节点→源站", "源站→边缘节点→中间源"],a:1,s:1},
+{type:"single",q:"CDN 解析原理相比普通域名解析，多了",o:["A 记录解析", "CDN 平台自动分配的 CNAME 域名的 GSLB 解析调度", "MX 记录解析", "TXT 记录解析"],a:1,s:1},
+{type:"single",q:"网站加速场景主要针对哪类内容加速",o:["数据库文件", "静态内容（网页样式、图片、小文件）", "操作系统镜像", "视频源文件"],a:1,s:1},
+{type:"single",q:"下载加速场景适用于",o:["网页浏览", "游戏安装包、APP 升级包等大文件下载", "数据库查询", "邮件发送"],a:1,s:1},
+{type:"single",q:"音视频加速依托 CDN 的哪项能力保证高并发",o:["单节点带宽", "支撑高峰期海量并发与媒体传输速度", "源站直连", "加密存储"],a:1,s:1},
+{type:"single",q:"腾讯云 CDN 境内流量新用户免费额度，企业用户是",o:["100GB", "500GB", "1TB", "无免费额度"],a:1,s:1},
+{type:"single",q:"腾讯云 CDN 基础服务计费模式是",o:["仅按请求数", "流量或带宽任选其一（阶梯计费）", "按 CPU 使用", "按存储容量"],a:1,s:1},
+{type:"single",q:"腾讯云 CDN 是否会收取回源流量费用",o:["会收取", "不会收取（CDN 侧不收回源流量费）", "按 50% 收取", "仅境外收取"],a:1,s:1},
+{type:"single",q:"腾讯云 CDN 增值服务计费的特点是",o:["必选", "可选、单独计费", "免费", "与基础服务捆绑"],a:1,s:1},
+{type:"single",q:"CDN 域名接入的第一步通常是",o:["配置 CNAME", "添加域名", "购买证书", "设置回源 HOST"],a:1,s:1},
+{type:"single",q:"CDN 节点缓存规则中，“不缓存”的含义是",o:["节点永久保存", "用户访问直接回源站响应", "浏览器缓存", "强制缓存"],a:1,s:1},
+{type:"single",q:"CDN 缓存规则中，“遵循源站”是指",o:["忽略源站头部", "根据源站 Cache-Control 或 Expires 决定缓存", "永远缓存", "不缓存"],a:1,s:1},
+{type:"single",q:"控制浏览器缓存行为的关键响应头是",o:["User-Agent", "Cache-Control", "Referer", "X-Cache-Lookup"],a:1,s:1},
+{type:"single",q:"浏览器缓存与 CDN 节点缓存的主要区别是",o:["二者位置完全不同，互不影响", "缓存数据存储位置不同（客户端 vs 节点）", "只有浏览器受源站头部影响", "只有 CDN 受源站头部影响"],a:1,s:1},
+{type:"single",q:"回源 HOST 的作用是",o:["决定用户访问的节点", "决定回源请求访问源站 IP 上的具体站点", "加密回源流量", "设置缓存时间"],a:1,s:1},
+{type:"single",q:"一个源站 IP 托管多个网站时，通过什么区分访问具体站点",o:["源站 IP", "回源 HOST", "CNAME", "Local DNS"],a:1,s:1},
+{type:"single",q:"CDN 访问控制中的防盗链通常基于哪个请求头",o:["User-Agent", "Referer", "Cache-Control", "Content-Type"],a:1,s:1},
+{type:"single",q:"CDN 的 IP 访问限频功能用于",o:["加速访问", "限制单个 IP 的访问频率", "缓存数据", "加密传输"],a:1,s:1},
+{type:"single",q:"CDN HTTPS 配置中，强制跳转是指",o:["跳转到源站", "HTTP 强制跳转 HTTPS", "跳转 DNS", "跳转 CNAME"],a:1,s:1},
+{type:"single",q:"CDN 支持以下哪种协议以提升传输效率并降低延迟",o:["FTP", "QUIC", "SMTP", "Telnet"],a:1,s:1},
+{type:"single",q:"CDN 基础配置中的“热备源站”用于",o:["加速缓存", "主源站故障时切换到备源站回源", "加密数据", "限频"],a:1,s:1},
+{type:"single",q:"CDN 回源配置中，range 回源的作用是",o:["合并回源", "分片回源，提升大文件传输效率", "强制跳转", "跟随 301"],a:1,s:1},
+{type:"single",q:"CDN 智能压缩功能主要用于",o:["加密数据", "压缩文本等资源以减小传输体积", "缓存图片", "限频"],a:1,s:1},
+{type:"single",q:"HTTP 响应头 X-Cache-Lookup 用于显示",o:["用户 IP", "CDN 节点缓存命中情况（hit/miss）", "源站地址", "状态码"],a:1,s:1},
+{type:"single",q:"在浏览器开发者工具中，General 部分用于收集",o:["请求 URL 与状态码等信息", "响应正文", "加密密钥", "缓存内容"],a:0,s:1},
+{type:"single",q:"Response Headers 是由谁发出使用的",o:["客户端向服务端", "服务端向客户端响应报文", "DNS 服务器", "GSLB"],a:1,s:1},
+{type:"single",q:"Request Headers 中用于标识浏览器身份的是",o:["Referer", "User-Agent", "Cache-Control", "Content-Type"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 200 表示",o:["重定向", "请求已成功", "服务器错误", "客户端错误"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 206 表示",o:["永久重定向", "分片传输（Range）", "权限错误", "网关超时"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 301 表示",o:["临时重定向", "永久重定向", "内容缺失", "网关错误"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 302 表示",o:["永久重定向", "临时重定向", "权限错误", "服务器错误"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 403 通常表示",o:["内容缺失", "权限错误", "网关错误", "成功"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 404 表示",o:["权限错误", "内容缺失或被删除", "网关超时", "成功"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 502 表示",o:["网关超时", "网关错误", "内容缺失", "成功"],a:1,s:1},
+{type:"single",q:"HTTP 状态码 504 表示",o:["网关错误", "网关超时", "权限错误", "内容缺失"],a:1,s:1},
+{type:"single",q:"CDN 返回的状态码 514 表示",o:["节点封禁", "超出访问限频（QPS）", "回源失败", "回环请求"],a:1,s:1},
+{type:"single",q:"CDN 返回的状态码 509 表示",o:["节点单点封禁", "访问限频", "回源失败", "回环请求"],a:0,s:1},
+{type:"single",q:"CDN 返回的状态码 423 通常表示",o:["节点封禁", "回环请求（跳转不符合逻辑）", "访问限频", "回源失败"],a:1,s:1},
+{type:"single",q:"CDN 返回的状态码 564 表示",o:["节点封禁", "HTTPS 请求回源失败", "访问限频", "回环请求"],a:1,s:1},
+{type:"single",q:"CDN 访问日志的默认存储时长是",o:["7 天", "30 天", "90 天", "永久"],a:1,s:1},
+{type:"single",q:"CDN 访问日志的打包粒度是",o:["分钟", "小时", "天", "周"],a:1,s:1},
+{type:"single",q:"排障时用于查看网站状态码、耗时、headers 的命令行工具是",o:["ping", "CURL", "mtr", "AWK"],a:1,s:1},
+{type:"single",q:"排障时用于检测网络链路质量的工具组合是",o:["CURL + postman", "ping + mtr", "AWK + grep", "DNS + CNAME"],a:1,s:1},
+{type:"single",q:"接入 CDN 后访问变慢，最可能的原因是",o:["节点过多", "首次访问未命中缓存需回源", "带宽太大", "证书过期"],a:1,s:1},
+{type:"single",q:"判断用户是否成功命中 CDN 缓存，应查看",o:["Referer", "X-Cache-Lookup 响应头", "User-Agent", "Content-Type"],a:1,s:1},
+{type:"single",q:"判断 CDN 是否发生回源，应观察",o:["浏览器缓存命中", "节点缓存未命中并请求源站", "DNS 解析", "CNAME 记录"],a:1,s:1},
+{type:"single",q:"回源超时的常见解决办法是",o:["降低带宽", "检查源站性能与网络并增大回源超时时间", "删除缓存", "关闭 HTTPS"],a:1,s:1},
+{type:"single",q:"接入 CDN 的加速域名通常要求是",o:["无需备案", "已完成 ICP 备案", "仅境外可用", "任意未注册域名"],a:1,s:1},
+{type:"single",q:"动态网站资源通常由什么生成",o:["静态文件", "服务器端程序实时生成", "浏览器缓存", "CDN 节点"],a:1,s:1},
+{type:"single",q:"静态网站与动态网站的主要区别是",o:["是否备案", "内容是否由服务器程序实时生成", "是否使用 CDN", "是否加密"],a:1,s:1},
+{type:"multi",q:"CDN 的优势包括",o:["海量资源储备", "全球智能调度", "一键接入", "功能丰富"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN 的组成部分包括",o:["遍布全球的加速节点", "GSLB 智能调度系统", "源站服务器", "用户终端"],a:[0, 1],s:2},
+{type:"multi",q:"CDN 节点的类型包括",o:["边缘节点", "中间源", "GSLB 调度节点", "源站服务器"],a:[0, 1],s:2},
+{type:"multi",q:"CDN 加速流程涉及的关键环节包括",o:["用户向 Local DNS 发起解析", "GSLB 分配最佳节点 IP", "节点缓存命中或回源", "用户直接连接源站绕过 CDN"],a:[0, 1, 2],s:2},
+{type:"multi",q:"CDN 的典型应用场景包括",o:["网站加速", "下载加速", "音视频加速", "数据库加速"],a:[0, 1, 2],s:2},
+{type:"multi",q:"腾讯云 CDN 计费包含",o:["基础服务计费（必选）", "增值服务计费（可选）", "回源流量费用（CDN 侧收取）", "阶梯式计费模式"],a:[0, 1, 3],s:2},
+{type:"multi",q:"CDN 节点缓存的三种规则包括",o:["不缓存", "强制缓存", "遵循源站", "浏览器缓存"],a:[0, 1, 2],s:2},
+{type:"multi",q:"影响 CDN 与浏览器缓存行为的源站响应头包括",o:["Cache-Control", "Expires", "Referer", "User-Agent"],a:[0, 1],s:2},
+{type:"multi",q:"CDN 基础配置功能包括",o:["多源站", "高级回源", "热备源站", "智能压缩"],a:[0, 1, 2],s:2},
+{type:"multi",q:"CDN 访问控制手段包括",o:["referer 防盗链", "IP 黑白名单", "IP 访问限频", "鉴权"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN 缓存配置功能包括",o:["缓存键", "浏览器缓存", "状态码缓存", "访问 URL 重写"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN 回源配置功能包括",o:["合并回源", "range 回源", "回源跟随 301/302", "回源超时"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN HTTPS 配置功能包括",o:["HTTP 2.0", "强制跳转", "TLS 版本", "QUIC"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN 高级配置功能包括",o:["用量封顶", "SEO 优化", "HTTP header 配置", "智能压缩"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"常见的源站返回 HTTP 状态码包括",o:["200", "301", "404", "514"],a:[0, 1, 2],s:2},
+{type:"multi",q:"属于 CDN 平台返回特有状态码的有",o:["509", "514", "564", "423"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN 排障常用工具包括",o:["浏览器开发者工具", "CURL", "ping / mtr", "postman"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于 CDN 缓存命中与回源，下列说法正确的有",o:["首次访问通常未命中需回源", "命中缓存时节点直接返回数据", "回源会拉取源站资源并缓存", "所有请求都直接回源"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于回源 HOST 与虚拟主机的说法正确的有",o:["回源 HOST 决定访问源站 IP 上的具体站点", "虚拟主机可在一台服务器托管多站点", "回源 HOST 等于用户访问的域名", "一个 IP 可托管多个网站"],a:[0, 1, 3],s:2},
+{type:"multi",q:"CDN 加速可解决的问题包括",o:["跨运营商访问不稳定", "跨地域访问延迟高", "跨境访问不稳定", "源站带宽瓶颈"],a:[0, 1, 2, 3],s:2},
+];
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术考试（第八套）— CDN 网站加速 <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

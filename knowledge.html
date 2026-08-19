@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术知识总览</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #f5f5f5;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            height: 52px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            padding: 0 16px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .topbar .title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .topbar .toggle-btn {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 6px 10px;
+            margin-right: 8px;
+        }
+        .topbar .btn-back {
+            color: #1a73e8;
+            text-decoration: none;
+            margin-left: auto;
+        }
+
+        .layout {
+            display: flex;
+        }
+        #sidebar {
+            width: 240px;
+            background: #fafafa;
+            border-right: 1px solid #eee;
+            position: sticky;
+            top: 52px;
+            height: calc(100vh - 52px);
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        #content {
+            flex: 1;
+            padding: 24px 32px;
+        }
+
+        .reading-card {
+            max-width: 860px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 32px 40px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            min-height: 60vh;
+        }
+
+        .doc-section {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+        }
+        .doc-title {
+            font-size: 24px;
+            color: #1a73e8;
+            margin-bottom: 12px;
+        }
+
+        body.nav-collapsed #sidebar {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar { display: none; }
+            body:not(.nav-collapsed) #sidebar { display: block; }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 80px;
+            color: #888;
+        }
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #c62828;
+        }
+
+        /* Markdown render styles */
+        .md-content h1 { font-size: 26px; margin: 24px 0 14px; padding-bottom: 10px; border-bottom: 2px solid #e8e8e8; }
+        .md-content h2 { font-size: 21px; margin: 20px 0 10px; color: #1a73e8; }
+        .md-content h3 { font-size: 17px; margin: 16px 0 8px; }
+        .md-content h4 { font-size: 15px; margin: 14px 0 6px; }
+        .md-content p { margin: 8px 0; line-height: 1.9; }
+        .md-content ul, .md-content ol { margin: 8px 0 8px 24px; line-height: 1.9; }
+        .md-content li { margin: 4px 0; }
+        .md-content blockquote { border-left: 4px solid #1a73e8; padding: 10px 16px; margin: 14px 0; background: #f8f9fa; color: #555; border-radius: 0 6px 6px 0; }
+        .md-content code { background: #f1f3f5; padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: Consolas, "Courier New", monospace; }
+        .md-content pre { background: #1e1e1e; color: #d4d4d4; padding: 18px; border-radius: 8px; overflow-x: auto; margin: 14px 0; line-height: 1.6; }
+        .md-content pre code { background: none; color: inherit; padding: 0; }
+        .md-content table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        .md-content th, .md-content td { border: 1px solid #e0e0e0; padding: 10px 14px; text-align: left; }
+        .md-content th { background: #f5f7fa; font-weight: 600; }
+        .md-content tr:nth-child(even) { background: #fafafa; }
+        .md-content strong { color: #1a73e8; }
+        .md-content hr { border: none; border-top: 1px solid #e8e8e8; margin: 20px 0; }
+        .md-content img { max-width: 100%; border-radius: 8px; margin: 8px 0; }
+        .md-content a { color: #1a73e8; text-decoration: none; }
+        .md-content a:hover { text-decoration: underline; }
+
+        #sidebar .nav-item { display: block; padding: 10px 16px; color: #555; text-decoration: none; font-size: 14px; border-left: 3px solid transparent; cursor: pointer; transition: all .15s; }
+        #sidebar .nav-item:hover { background: #eef3ff; color: #1a73e8; }
+        #sidebar .nav-item.active { background: #e3edff; color: #1a73e8; border-left-color: #1a73e8; font-weight: 600; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <button class="toggle-btn" title="折叠/展开目录">☰</button>
+    <span class="title">云技术知识总览</span>
+    <a class="btn-back" href="index.html" style="margin-left:auto;">← 返回首页</a>
+</div>
+<div class="layout">
+    <nav id="sidebar"></nav>
+    <main id="content">
+        <div class="md-content reading-card">
+            <div class="loading">⏳ 正在加载知识文档...</div>
+        </div>
+    </main>
+</div>
+<script>
+const DOCS = [
+  { file: "knowledge/03操作系统运维基础-V0.5.md", name: "操作系统运维基础" },
+  { file: "knowledge/04操作系统运维工具-V0.4.md", name: "操作系统运维工具" },
+  { file: "knowledge/05云服务器-V0.4.md", name: "云服务器CVM" },
+  { file: "knowledge/06云服务器之云硬盘-V0.4.md", name: "云硬盘CBS" },
+  { file: "knowledge/07域名-V0.4.md", name: "域名" },
+  { file: "knowledge/08DNS解析-V0.4.md", name: "DNS解析" },
+  { file: "knowledge/09SSL证书-V0.4.md", name: "SSL证书" },
+  { file: "knowledge/10备案-V0.4.md", name: "备案" },
+  { file: "knowledge/11网络运维基础-V0.3.md", name: "网络运维基础" },
+  { file: "knowledge/12私有网络-V0.3.md", name: "私有网络VPC" },
+  { file: "knowledge/13私有网络 之 网络连接-V0.3.md", name: "网络连接" },
+  { file: "knowledge/14云负载均衡.md", name: "云负载均衡CLB" },
+  { file: "knowledge/15 云数据库Mysql-V0.5.md", name: "云数据库MySQL" },
+  { file: "knowledge/16 云数据库Redis-V0.5.md", name: "云数据库Redis" },
+  { file: "knowledge/17对象存储-V0.3.md", name: "对象存储COS" },
+  { file: "knowledge/18网站加速CDN-V0.3.md", name: "CDN加速" },
+  { file: "knowledge/22安全与防护-V0.3.md", name: "安全与防护" },
+  { file: "knowledge/23安全产品-V0.3.md", name: "安全产品" },
+  { file: "knowledge/云技术综合考试题库.md", name: "综合考试题库" }
+];
+
+const contentEl = document.getElementById('content').querySelector('.reading-card');
+
+function loadAll() {
+    contentEl.innerHTML = '<div class="loading">⏳ 正在加载 19 篇知识文档...</div>';
+    let loaded = 0;
+    const total = DOCS.length;
+    DOCS.forEach((doc, i) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', doc.file, true);
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                let html;
+                if (xhr.status === 200 || xhr.status === 0) {
+                    try { html = marked.parse(xhr.responseText); }
+                    catch (e) { html = '<div class="error">❌ 解析失败：' + e.message + '</div>'; }
+                } else {
+                    html = '<div class="error">❌ 加载失败：' + doc.file + '</div>';
+                }
+                if (loaded === 0) contentEl.innerHTML = '';
+                const sec = document.createElement('section');
+                sec.id = 'doc-' + i;
+                sec.className = 'doc-section';
+                sec.innerHTML = '<h2 class="doc-title">' + doc.name + '</h2>' + html;
+                contentEl.appendChild(sec);
+                loaded++;
+                if (loaded === total) renderNav();
+            }
+        };
+        xhr.send();
+    });
+}
+
+function renderNav() {
+    const nav = document.getElementById('sidebar');
+    nav.innerHTML = DOCS.map((d, i) =>
+        '<a class="nav-item" data-i="' + i + '" href="#doc-' + i + '">' + d.name + '</a>'
+    ).join('');
+    nav.querySelectorAll('.nav-item').forEach(el => {
+        el.addEventListener('click', e => {
+            e.preventDefault();
+            const i = +el.dataset.i;
+            document.getElementById('doc-' + i).scrollIntoView({ behavior: 'smooth' });
+            setActive(i);
+        });
+    });
+    setupScrollSpy();
+}
+
+function setupScrollSpy() {
+    const sections = document.querySelectorAll('.doc-section');
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const i = +entry.target.id.replace('doc-', '');
+                setActive(i);
+            }
+        });
+    }, { rootMargin: '-80px 0px -60% 0px', threshold: 0 });
+    sections.forEach(sec => observer.observe(sec));
+}
+
+function setActive(i) {
+    document.querySelectorAll('.nav-item').forEach(el =>
+        el.classList.toggle('active', +el.dataset.i === i));
+}
+
+function toggleNav() {
+    document.body.classList.toggle('nav-collapsed');
+}
+
+document.querySelector('.topbar .toggle-btn').addEventListener('click', toggleNav);
+loadAll();
+</script>
+</body>
+</html>

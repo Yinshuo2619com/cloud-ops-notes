@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术考试（第九套）— 对象存储 COS</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术考试（第九套）— 对象存储 COS</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"关于对象存储（COS）的定义，下列描述正确的是",o:["具有严格目录层次结构的块设备存储", "无目录层次结构、无数据格式限制，支持HTTP/HTTPS协议访问的分布式存储服务", "只能存放关系型数据库文件的专用存储", "仅支持局域网内部访问的共享目录服务"],a:1,s:1},
+{type:"single",q:"对象存储的基本单元（即实际存储的数据文件）是",o:["存储桶（Bucket）", "对象（Object）", "分区（Partition）", "卷（Volume）"],a:1,s:1},
+{type:"single",q:"存储桶（Bucket）在对象存储中的作用是",o:["对象的载体，可理解为存放对象的容器", "计算资源的调度单元", "网络流量的转发节点", "数据库的索引结构"],a:0,s:1},
+{type:"single",q:"关于对象存储的存储桶容量，下列说法正确的是",o:["单桶最大只能存放1TB数据", "存储桶空间无容量上限，且无需分区管理", "必须提前规划分区大小", "容量固定为购买时的规格，不可变化"],a:1,s:1},
+{type:"single",q:"存储桶名称 examplebucket-1250000000 中，1250000000 表示",o:["存储桶的容量", "地域编号", "APPID，即云账号的唯一标识符", "对象的版本号"],a:2,s:1},
+{type:"single",q:"云API密钥中，SecretId 的作用是",o:["标识API调用者的身份", "加密签名字符串并在服务端验证签名", "指定存储桶所在地域", "设置对象的访问权限"],a:0,s:1},
+{type:"single",q:"云API密钥中，SecretKey 的作用是",o:["标识API调用者身份", "用于加密签名字符串和服务器端验证签名字符串", "指定对象的存储类型", "定义存储桶的生命周期"],a:1,s:1},
+{type:"single",q:"关于APPID与云API密钥的关系，正确的是",o:["一个APPID只能创建一个云API密钥", "一个APPID可以创建多个云API密钥", "APPID就是SecretKey", "密钥必须与存储桶一一对应"],a:1,s:1},
+{type:"single",q:"对象存储中的 Region（地域）指的是",o:["云托管机房的分布地区", "存储桶的容量规格", "对象的访问频度", "CDN节点的缓存策略"],a:0,s:1},
+{type:"single",q:"对象存储中的策略（policy）是指",o:["计费的折扣方案", "由若干元素构成、用来描述授权具体信息的规则", "数据压缩算法", "网络路由表"],a:1,s:1},
+{type:"single",q:"用户直接通过对象链接下载文件所产生的流量属于",o:["CDN回源流量", "外网下行流量", "内网流量", "专线流量"],a:1,s:1},
+{type:"single",q:"数据从对象存储传输到CDN边缘节点所产生的流量属于",o:["外网下行流量", "CDN回源流量", "公网上行流量", "跨地域复制流量"],a:1,s:1},
+{type:"single",q:"对象存储的默认域名是指",o:["用户自行购买并备案的域名", "创建存储桶时，由系统根据存储桶名称和地域自动生成的源站域名", "CDN厂商分配的加速域名", "负载均衡的VIP地址"],a:1,s:1},
+{type:"single",q:"关于自定义CDN加速域名，下列说法正确的是",o:["可以使用任意未备案域名", "需要将已备案的自定义域名绑定至国内CDN加速平台后加速访问桶内对象", "只能由系统自动生成，不可自定义", "绑定后无法再使用默认域名"],a:1,s:1},
+{type:"single",q:"自定义源站域名的作用是",o:["将已备案的自定义域名绑定至当前存储桶，通过该域名直接访问桶内对象", "为存储桶开启内容审核", "限制存储桶的读写速度", "为对象生成缩略图"],a:0,s:1},
+{type:"single",q:"对象存储根据访问频度的高低提供的存储类型数量是",o:["2种", "3种", "5种", "10种"],a:2,s:1},
+{type:"single",q:"对象存储划分不同存储类型的主要依据是",o:["文件的格式", "数据被访问的频度高低", "文件名的长度", "上传时使用的工具"],a:1,s:1},
+{type:"single",q:"对于访问非常频繁的网站图片、静态资源，最合适的存储类型是",o:["标准存储", "低频存储", "归档存储", "深度归档存储"],a:0,s:1},
+{type:"single",q:"对于访问频率较低（如每月访问一两次）但要求较快读取的数据，较合适的存储类型是",o:["标准存储", "低频存储", "归档存储", "深度归档存储"],a:1,s:1},
+{type:"single",q:"对于需要长期保存、几乎不访问且希望存储成本最低的数据，应选择",o:["标准存储", "低频存储", "深度归档存储", "本地SSD"],a:2,s:1},
+{type:"single",q:"下列哪种存储类型在读取数据时会产生数据取回费用",o:["标准存储", "归档存储与深度归档存储", "智能分层的高频层", "所有类型都不会产生"],a:1,s:1},
+{type:"single",q:"归档类存储设有最短存储时间限制，若数据存储时间不足最短时间将",o:["免费删除，不产生任何费用", "按照最短存储时间进行扣费", "自动转为标准存储", "禁止删除操作"],a:1,s:1},
+{type:"single",q:"对象存储支持的两种计费方式是",o:["按量计费（后付费）和资源包（预付费）", "竞价计费和包年包月", "按核时计费和按台计费", "仅支持包年包月"],a:0,s:1},
+{type:"single",q:"下列哪一项不属于对象存储的费用组成",o:["存储容量费用", "请求费用", "流量费用", "机房机架托管费用"],a:3,s:1},
+{type:"single",q:"对象存储的请求费用主要与下列哪项相关",o:["请求数（QPS），访问页面时可能触发多次文件请求", "存储桶的名称长度", "存储桶所在机房的温度", "账号注册时间"],a:0,s:1},
+{type:"single",q:"清单功能、检索功能、批量处理等属于对象存储费用中的",o:["流量费用", "管理功能费用", "数据取回费用", "存储容量费用"],a:1,s:1},
+{type:"single",q:"内容审核、图片水印、加密等能力在计费上属于",o:["对象存储的存储容量费用", "由其他产品提供功能并由其他产品扣费", "免费赠送，不产生费用", "计入请求费用"],a:1,s:1},
+{type:"single",q:"对象存储新用户的免费额度可以用于抵扣",o:["标准存储类型数据产生的标准存储容量费用", "归档存储的取回费用", "外网下行流量费用", "请求数费用"],a:0,s:1},
+{type:"single",q:"关于免费额度的地域范围，正确的说法是",o:["适用于所有地域，包括金融云", "只适用于公有云地域，不包含金融云地域", "只适用于海外地域", "只适用于金融云地域"],a:1,s:1},
+{type:"single",q:"在享有免费额度期间，下列哪项费用仍需正常付费",o:["标准存储容量费用", "低频存储容量、请求、流量等非标准存储容量计费项", "全部费用都免费", "不产生任何费用"],a:1,s:1},
+{type:"single",q:"用户因欠费或违禁原因停服后，其免费额度的处理是",o:["继续正常享受", "不能继续享受，只有服务重新开启后才可继续享受", "自动延长有效期", "额度翻倍补偿"],a:1,s:1},
+{type:"single",q:"对象存储的存储量按二进制计算，1TB 等于",o:["1000GB", "1024GB", "1024MB", "512GB"],a:1,s:1},
+{type:"single",q:"为存储桶选择地域时，首要遵循的原则是",o:["就近原则，选择靠近业务用户的地域", "选择价格最低的地域", "选择开通时间最早的地域", "随机选择"],a:0,s:1},
+{type:"single",q:"位于深圳的公司开发一款主要面向华北地区人群的APP，其存储桶地域应首选",o:["北京", "广州", "新加坡", "硅谷"],a:0,s:1},
+{type:"single",q:"中国大陆公有云地域，单账号对象存储的默认带宽是",o:["上行和下行各自为15Gbit/s", "上行和下行各自为10Gbit/s", "上行1Gbit/s、下行10Gbit/s", "无带宽限制"],a:0,s:1},
+{type:"single",q:"中国大陆以外的其他地域，单账号对象存储的默认带宽是",o:["上行和下行各自为15Gbit/s", "上行和下行各自为10Gbit/s", "上行和下行各自为5Gbit/s", "上行和下行各自为100Mbit/s"],a:1,s:1},
+{type:"single",q:"客户反馈通过外网上传文件至COS很慢，最常见的原因是",o:["COS带宽不足", "客户端本地网络上行带宽限制或运营商线路不稳定", "存储桶容量已满", "对象名称过长"],a:1,s:1},
+{type:"single",q:"家庭办理了千兆宽带，但上传文件到COS只有约2.5MB/s，主要原因是",o:["COS限制了单用户上传速度", "千兆指的是下行带宽，上行带宽由运营商分配（一般8-50Mbps）", "文件格式不被支持", "存储桶选择了归档存储"],a:1,s:1},
+{type:"single",q:"客户端从COS下载（访问）文件时，速率主要受限于",o:["客户端本地的下行带宽", "客户端本地的上行带宽", "COS的上行带宽", "存储桶的对象数量"],a:0,s:1},
+{type:"single",q:"排查COS访问缓慢时，判断运营商线路是否正常的常用方法是",o:["查看存储桶剩余容量", "通过ping测试，延时稳定且不丢包即基本正常", "重启存储桶", "更换对象名称"],a:1,s:1},
+{type:"single",q:"关于COSBrowser工具，描述正确的是",o:["图形化客户端工具，操作简单，但不易和业务系统结合", "命令行工具，学习成本高", "只能用于查看账单", "只能在服务器端运行的守护进程"],a:0,s:1},
+{type:"single",q:"关于COSCLI工具，描述正确的是",o:["图形界面工具，适合新手点选操作", "命令行工具，操作难度较高，但容易与业务系统融合，可通过命令、代码调用COS数据", "只能上传不能下载", "仅支持Windows图形界面"],a:1,s:1},
+{type:"single",q:"COS签名工具的主要用途是",o:["压缩对象体积", "使用签名算法生成签名，与COS文件URL组成临时访问链接", "为存储桶扩容", "统计访问日志"],a:1,s:1},
+{type:"single",q:"COS请求工具本质上是指",o:["产品API接口调用的使用方法，与开发语言相关", "一种数据库客户端", "浏览器插件广告过滤器", "硬件加速卡"],a:0,s:1},
+{type:"single",q:"关于SDK工具包，描述正确的是",o:["由开发语言编写而成，可集成API接口、指定参数直接实现对产品API的调用", "只能用于对象存储，其他产品不提供", "不需要密钥即可调用", "只支持一种编程语言"],a:0,s:1},
+{type:"single",q:"可以将COS当作网盘直接对接使用的第三方应用示例是",o:["WordPress 论坛与 Cloudreve", "Excel 与 PowerPoint", "Windows 记事本", "BIOS 固件"],a:0,s:1},
+{type:"single",q:"基础实验中，要求新建存储桶并上传 /img/aa.jpg 供外部匿名浏览，应配置的权限是",o:["私有读写", "公有读私有写", "公有读写", "禁止一切访问"],a:1,s:1},
+{type:"single",q:"存储桶设置为私有读写后，若仍需通过外网URL访问某个对象，应采用",o:["把桶改成公有读写", "通过COS签名认证生成带签名的临时访问链接", "关闭防盗链", "更换对象存储类型"],a:1,s:1},
+{type:"single",q:"防盗链功能的主要作用是",o:["防止COS中的文件被其他站点非法引用盗用", "加快文件下载速度", "压缩图片体积", "备份存储桶数据"],a:0,s:1},
+{type:"single",q:"为存储桶开启静态网站配置的作用是",o:["将存储桶作为静态网站源站，通过静态网站访问桶内页面与对象", "让存储桶可以运行PHP动态程序", "将对象转为归档存储", "禁止公网访问"],a:0,s:1},
+{type:"single",q:"下列哪种方式不属于操作对象存储的常规方式",o:["控制台", "API/SDK", "COSBrowser、COSCLI等工具", "直接登录COS后端物理服务器修改磁盘"],a:3,s:1},
+{type:"single",q:"存储桶接入CDN加速后带来的主要收益是",o:["利用遍布各地的CDN节点就近响应，加速文件下载访问", "自动降低存储容量费用", "自动删除冷数据", "提升存储桶的容量上限"],a:0,s:1},
+{type:"single",q:"已经购买了外网下行流量包，是否还需要购买CDN回源流量包",o:["不需要，外网下行流量包可抵扣回源流量", "需要，CDN回源流量与外网下行流量是不同计费项，需分别购买对应流量包", "两者完全等价，可任选其一", "回源流量不收费，无需购买"],a:1,s:1},
+{type:"single",q:"对象存储与云硬盘的主要区别是",o:["云硬盘需挂载到云服务器作为块设备使用，COS可通过HTTP/HTTPS直接访问且容量无上限", "二者完全相同", "云硬盘不需要付费", "COS只能挂载给一台服务器使用"],a:0,s:1},
+{type:"single",q:"对象存储与文件存储的主要区别是",o:["文件存储提供NFS/CIFS等共享目录层次结构，COS无目录层次，通过API/HTTP访问", "文件存储不能被多台主机共享", "对象存储必须通过NFS挂载", "二者的访问协议完全一致"],a:0,s:1},
+{type:"single",q:"用户访问 baidu.com 而页面素材来自 dss0.bdstatic.com，这一现象说明",o:["网站页面代码调用了对象存储域名上的静态资源文件", "两个网站属于不同公司", "浏览器出现了跳转错误", "对象存储只能存放HTML文件"],a:0,s:1},
+{type:"single",q:"上传一个文件到存储桶后，长期保存该文件主要产生的费用是",o:["存储容量费用（以及上传时的请求费用）", "外网下行流量费用", "数据取回费用", "管理功能费用"],a:0,s:1},
+{type:"single",q:"生命周期（Lifecycle）规则在对象存储中的典型用途是",o:["按规则自动将对象转换存储类型或到期删除，从而优化成本", "为对象生成缩略图", "限制账号的登录次数", "对存储桶进行扩容"],a:0,s:1},
+{type:"single",q:"跨地域复制（跨区域复制）功能的作用是",o:["把对象自动异步复制到另一个地域的存储桶，用于容灾备份或就近访问", "把对象复制到本地磁盘", "将对象转换为归档存储", "加速同一地域内的上传"],a:0,s:1},
+{type:"single",q:"访问控制列表（ACL）在对象存储中用于",o:["为存储桶或对象设置读写访问权限", "定义CDN缓存过期时间", "设置数据压缩比例", "限制文件上传大小"],a:0,s:1},
+{type:"multi",q:"对象存储的基本概念包括",o:["存储桶（Bucket）", "对象（Object）", "APPID", "Region（地域）"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储按访问频度提供的存储类型包括",o:["标准存储", "低频存储", "归档存储", "深度归档存储"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储的费用主要由以下哪些部分组成",o:["存储容量费用", "请求费用", "数据取回费用", "流量费用与管理功能费用"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于对象存储的流量计费，下列说法正确的是",o:["数据传输到客户端产生外网下行流量", "数据传输到CDN边缘节点产生CDN回源流量", "只要从对象存储流出的流量都要计费，但价格可能不同", "外网下行流量包可以直接抵扣CDN回源流量"],a:[0, 1, 2],s:2},
+{type:"multi",q:"可以用于管理存储桶与对象的方式包括",o:["云控制台", "API接口", "SDK工具包", "COSBrowser、COSCLI等工具"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储支持用户进行的操作包括",o:["上传对象", "下载对象", "删除对象", "存储桶与对象的权限设置"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"存储桶可以配置的功能包括",o:["防盗链", "静态网站配置", "加速域名配置", "自定义源站域名配置"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于COSBrowser工具，下列说法正确的是",o:["属于图形化客户端工具", "操作简单，适合初学者进行日常文件管理", "不易与业务系统深度结合", "是一款命令行工具"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于COSCLI工具，下列说法正确的是",o:["属于命令行工具", "操作难度相对较高", "容易与业务系统融合，可通过命令或代码调用COS数据", "只能查看文件，不能上传下载"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于新用户免费额度，下列说法正确的是",o:["面向首次开通对象存储服务的个人和企业用户", "可抵扣标准存储类型的标准存储容量费用", "只适用于公有云地域，不包含金融云地域", "欠费或违禁停服期间不能继续享受免费额度"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"影响客户端与COS之间传输速度的因素包括",o:["客户端本地的上行带宽（上传时）", "客户端本地的下行带宽（下载时）", "运营商线路的稳定性与丢包情况", "COS默认带宽通常不是瓶颈"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"使用归档存储或深度归档存储时需要注意",o:["存在最短存储时间限制，不足按最短时间计费", "读取数据会产生数据取回费用", "数据需要先取回（解冻）才能读取，实时性较差", "适合长期保存、极少访问的冷数据"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储中与域名相关的概念包括",o:["默认域名（源站域名）", "自定义CDN加速域名", "自定义源站域名", "绑定自定义域名一般要求域名已完成备案"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于云API密钥（SecretId/SecretKey），下列说法正确的是",o:["SecretId用于标识API调用者身份", "SecretKey用于加密签名字符串和服务端验证签名", "一个APPID可以创建多个云API密钥", "密钥可以公开发布以方便协作"],a:[0, 1, 2],s:2},
+{type:"multi",q:"对象存储的典型应用场景包括",o:["CDN数据分发与静态资源托管", "静态网站托管", "大数据计算与分析的数据湖", "海量数据的备份与归档"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于存储桶的访问权限，下列说法正确的是",o:["可设置为私有读写", "可设置为公有读私有写", "可通过策略（policy）进行更精细的授权", "公有读写权限存在数据被篡改风险，需谨慎使用"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对象存储、文件存储与云硬盘的区别体现在",o:["云硬盘为块存储，需挂载到云服务器使用", "文件存储提供共享目录层次，支持多主机共享访问", "对象存储无目录层次，通过HTTP/HTTPS或API访问", "三者在功能、性能与价格上各有侧重，需按场景选型"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"生命周期规则可以帮助实现",o:["将标准存储对象转换为低频存储", "将低频存储对象转换为归档/深度归档存储", "设置对象到期自动删除", "清理未完成的分块上传碎片"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"为提升终端用户访问COS文件的速度，可采取的措施包括",o:["为存储桶接入CDN加速", "按就近原则选择合适的存储桶地域", "绑定自定义加速域名并做好缓存配置", "将所有热点文件转为深度归档存储"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于对象存储的计费方式与计费项，下列说法正确的是",o:["支持按量计费（后付费）", "支持资源包（预付费）方式抵扣", "清单、检索、批量处理等管理功能会产生管理功能费用", "内容审核、图片水印等由其他产品计费"],a:[0, 1, 2, 3],s:2},
+];
+;
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术考试（第九套）— 对象存储 COS <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

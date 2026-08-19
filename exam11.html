@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术考试（第十一套）— 安全产品体系</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术考试（第十一套）— 安全产品体系</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"腾讯云主机安全是一款针对云上主机安全防护的产品，其核心能力不包括",o:["黑客入侵检测", "漏洞风险预警", "数据跨地域备份", "基于机器学习的威胁分析"],a:2,s:1},
+{type:"single",q:"主机安全在木马文件检测方面，集成了腾讯电脑管家的哪一代反病毒引擎",o:["TAV 第一代", "TAV 新一代", "自研轻量级 Agent 引擎", "哈勃分析系统独立引擎"],a:1,s:1},
+{type:"single",q:"主机安全的优势中，关于维护和资源占用描述正确的是",o:["需人工维护检测脚本", "安全策略本地手动更新", "自研轻量级 Agent，绝大多数计算在云端进行", "需登录每台服务器逐一排查"],a:2,s:1},
+{type:"single",q:"主机安全中，网站后门木马又叫什么",o:["Webshell", "Rootkit", "Botnet", "Trojan-Downloader"],a:0,s:1},
+{type:"single",q:"主机安全异常登录检测基于哪四个维度对登录日志进行分析",o:["IP、用户名、时间、地点", "带宽、CPU、内存、磁盘", "端口、协议、包长、频率", "进程、文件、注册表、服务"],a:0,s:1},
+{type:"single",q:"主机安全对异常登录行为智能算法判定后，会标记为",o:["正常或异常", "可疑或高危", "通过或拒绝", "允许或阻断"],a:1,s:1},
+{type:"single",q:"主机安全检测到云服务器被尝试暴力破解密码时，会通过什么渠道告知用户",o:["仅在控制台显示", "站内信或短信", "电话通知", "邮件且只邮件"],a:1,s:1},
+{type:"single",q:"主机安全反弹 Shell 功能监控的是服务器上的哪类行为",o:["正向连接外网下载", "Shell 反向连接行为", "加密流量传输", "DNS 异常查询"],a:1,s:1},
+{type:"single",q:"主机安全本地提权功能监控提权事件，并支持创建什么用于设置被允许的提权行为",o:["黑名单", "白名单", "灰名单", "观察名单"],a:1,s:1},
+{type:"single",q:"主机安全漏洞管理可预警的漏洞类型不包括",o:["Linux 软件漏洞", "Windows 系统漏洞", "Web-CMS 漏洞", "物理机房门禁漏洞"],a:3,s:1},
+{type:"single",q:"主机安全基线管理支持的功能是",o:["只支持一键检测", "定期检测和一键检测，并提供风险等级与修复建议", "仅查看不支持检测", "仅支持自定义基线"],a:1,s:1},
+{type:"single",q:"主机安全高级防御可检测的威胁类型不包括",o:["Webshell 探测", "Struts 漏洞利用", "命令注入攻击", "DDoS 流量清洗"],a:3,s:1},
+{type:"single",q:"主机安全各版本的计费方式，基础版是",o:["免费", "10元/个/月", "80元/个/月", "180元/个/月"],a:0,s:1},
+{type:"single",q:"主机安全专业版的计费标准是",o:["免费", "10元/个/月", "80元/个/月", "180元/个/月"],a:2,s:1},
+{type:"single",q:"主机安全旗舰版的计费标准是",o:["免费", "10元/个/月", "80元/个/月", "180元/个/月"],a:3,s:1},
+{type:"single",q:"主机安全中，恶意请求功能的作用是对外界请求行为进行",o:["加密传输", "实时监控及识别恶意请求", "限速封禁所有请求", "缓存加速"],a:1,s:1},
+{type:"single",q:"主机安全高危命令功能可以对命令的危险程度进行",o:["等级划分并实时告警", "自动删除", "仅记录不告警", "忽略处理"],a:0,s:1},
+{type:"single",q:"主机安全控制台的优势是",o:["需登录多台服务器", "安全事件统一管理，集中运维", "仅支持单台主机", "不支持可视化"],a:1,s:1},
+{type:"single",q:"DDoS 攻击的全称是",o:["Distributed Denial of Service", "Dynamic Denial of Service", "Distributed Data Over Service", "Direct Denial of System"],a:0,s:1},
+{type:"single",q:"网络层 DDoS 攻击主要利用什么方式导致目标服务器无法响应",o:["加密通信", "大流量拥塞带宽、消耗系统资源", "修改数据库", "删除文件"],a:1,s:1},
+{type:"single",q:"下列哪种不属于常见网络层 DDoS 攻击类型",o:["SYN Flood", "ACK Flood", "UDP Flood", "HTTP GET Flood（应用层）"],a:3,s:1},
+{type:"single",q:"反射型 DDoS 攻击可以利用的协议不包括",o:["DNS", "NTP", "SSDP", "HTTP/2（此处指非反射型）"],a:3,s:1},
+{type:"single",q:"CC 攻击主要消耗目标服务器的哪类资源",o:["仅带宽", "应用层 CPU/内存等资源", "仅磁盘空间", "仅显卡资源"],a:1,s:1},
+{type:"single",q:"关于 CC 攻击的特点，下列说法正确的是",o:["见得到真实源 IP 和特别大的异常流量", "属于应用层攻击，伪装成正常用户访问", "属于网络层流量攻击", "只能针对静态页面"],a:1,s:1},
+{type:"single",q:"腾讯云 DDoS 基础防护为云上用户提供免费的防护，默认防护带宽为",o:["512Mbps", "2Gbps", "10Gbps", "100Gbps"],a:1,s:1},
+{type:"single",q:"DDoS 基础防护的接入特点是",o:["需手动配置且收费", "默认自动开启，秒级防护，用户无需操作", "需更换 IP", "仅支持云外用户"],a:1,s:1},
+{type:"single",q:"DDoS 高防包的目标用户群体是",o:["只针对腾讯云云内用户", "全场景云内+云外", "仅本地 IDC", "仅游戏行业"],a:0,s:1},
+{type:"single",q:"DDoS 高防包的接入特点是",o:["需修改 DNS", "绑定 IP 直接生效，无需更换 IP", "需专线接入", "需重建网络"],a:1,s:1},
+{type:"single",q:"DDoS 高防包在地域上的限制是",o:["可跨地域绑定", "区分地域，只能绑定同一地域资源", "无地域限制", "仅支持海外"],a:1,s:1},
+{type:"single",q:"DDoS 高防 IP 主要解决哪类用户的防护需求",o:["只针对腾讯云内用户", "非腾讯云上用户（云内外均支持）", "仅内网用户", "仅免费用户"],a:1,s:1},
+{type:"single",q:"DDoS 高防 IP 接入防护通常需要",o:["无需任何配置", "修改 DNS 解析或修改业务 IP", "仅绑定即可", "安装 Agent"],a:1,s:1},
+{type:"single",q:"关于 DDoS 高防包与高防 IP 的区别，正确的是",o:["高防包支持云内外，高防 IP 仅云内", "高防包不需换 IP，高防 IP 需修改 DNS", "两者均不防 CC", "两者均无地域限制"],a:1,s:1},
+{type:"single",q:"当攻击流量超出免费防护阈值时，腾讯云会进行封堵，目的是",o:["惩罚被攻击用户", "保护整个云平台网络稳定，避免影响其他用户", "节省存储", "提升带宽"],a:1,s:1},
+{type:"single",q:"DDoS 防御最大成本来自",o:["人力成本", "带宽费用", "软件授权", "电力费用"],a:1,s:1},
+{type:"single",q:"DDoS 高防 IP 的防护能力上限可达",o:["2Gbps", "10Gbps", "100Gbps", "保底+弹性最高 1Tbps"],a:3,s:1},
+{type:"single",q:"关于 DDoS 高防包与高防 IP 是否防 CC 攻击，正确的是",o:["两者都不防 CC", "基础防护防 CC，其余不防", "高防包和高防 IP 均防 CC 攻击", "仅高防 IP 防 CC"],a:2,s:1},
+{type:"single",q:"腾讯云 Web 应用防火墙简称",o:["WAF", "IDS", "IPS", "FW"],a:0,s:1},
+{type:"single",q:"WAF 可防御的攻击类型不包括",o:["SQL 注入", "XSS 跨站脚本", "木马上传", "SYN Flood（网络层 DDoS）"],a:3,s:1},
+{type:"single",q:"WAF 中负责 OWASP Top10 防御的是",o:["仅 AI 引擎", "安全规则引擎", "仅 BOT 管理", "仅负载均衡"],a:1,s:1},
+{type:"single",q:"WAF 引入 AI 防御能力的作用是",o:["替代规则引擎", "交叉验证持续学习，捕捉未知攻击并减少误报", "仅用于计费", "仅用于日志"],a:1,s:1},
+{type:"single",q:"WAF 的 BOT 行为管理基于什么进行分析识别",o:["仅 IP 黑名单", "AI 行为分析引擎、流量画像与行为模型", "仅手动规则", "仅验证码"],a:1,s:1},
+{type:"single",q:"WAF 智能 CC 防护可自定义什么维度进行更精确防护",o:["仅 IP 维度", "自定义 session 维度", "仅地理位置", "仅时间"],a:1,s:1},
+{type:"single",q:"WAF 智能 CC 防护综合哪些信息智能决策生成防御策略",o:["仅源站 CPU", "源站异常响应（超时、延迟）和网站历史访问数据", "仅用户投诉", "仅 cookies"],a:1,s:1},
+{type:"single",q:"WAF 一键无缝接入百 G 抗 DDoS 能力，属于其哪类高级功能",o:["AI 引擎", "智能 CC 防护（含抗 D 能力）", "BOT 管理", "负载均衡"],a:1,s:1},
+{type:"single",q:"WAF 产品分类中，SaaS 型 WAF 通过什么方式接入",o:["CLB 旁路检测", "DNS 解析调度分配 CNAME", "专线接入", "修改源站 IP"],a:1,s:1},
+{type:"single",q:"负载均衡型 WAF 与什么产品联动进行旁路检测",o:["CDN", "七层负载均衡（CLB）监听器", "NAT 网关", "VPN"],a:1,s:1},
+{type:"single",q:"关于 SaaS 型与负载均衡型 WAF 的延迟，说法正确的是",o:["SaaS 型延迟更低", "负载均衡型无感知接入、毫秒级延迟", "两者延迟相同", "负载均衡型延迟最高"],a:1,s:1},
+{type:"single",q:"如需使用网页防篡改和数据防泄漏功能，应选择",o:["负载均衡型 WAF", "SaaS 型 WAF", "两者均可", "不需要 WAF"],a:1,s:1},
+{type:"single",q:"SaaS 型 WAF 购买时需要选择",o:["无需选择区域", "所属区域", "仅关联 CLB 区域", "仅公网出口"],a:1,s:1},
+{type:"single",q:"负载均衡型 WAF 购买时",o:["需要选择地域", "不需要选择地域，控制台配置时关联 CLB 支持区域", "必须绑定源站", "只能海外"],a:1,s:1},
+{type:"single",q:"SaaS 型 WAF 接入流程中，为避免攻击者绕过 WAF 直接攻击源站，应配合",o:["CDN", "安全组", "NAT 网关", "对象存储"],a:1,s:1},
+{type:"single",q:"关于 WAF 是否可防 DDoS 攻击，下列说法正确的是",o:["WAF 能防所有 DDoS", "BGP 高防（DDoS 高防）能防 DDoS，WAF 主要防 CC 等 Web 攻击", "WAF 能完全替代高防 IP", "WAF 与 DDoS 无关"],a:1,s:1},
+{type:"single",q:"WAF 的防护能力中，DNS 链路劫持相关的是",o:["DNS 链路劫持检测", "仅 DNS 解析加速", "DNS 加密", "DNS 缓存"],a:0,s:1},
+{type:"single",q:"主机安全侧重哪一层防护",o:["流量层（DDoS、CC）", "系统层（木马、漏洞）", "仅网络层", "仅应用层"],a:1,s:1},
+{type:"single",q:"网络安全（DDoS、WAF）侧重哪一层防护",o:["系统层", "流量层（DDoS、CC）", "仅物理层", "仅数据层"],a:1,s:1},
+{type:"single",q:"主机安全的哪个版本为免费版本",o:["轻量版", "基础版", "专业版", "旗舰版"],a:1,s:1},
+{type:"single",q:"主机安全轻量版计费为",o:["免费", "10元/个/月", "80元/个/月", "180元/个/月"],a:1,s:1},
+{type:"single",q:"下列哪种攻击属于应用层 DDoS 的一种",o:["SYN Flood", "CC 攻击", "UDP Flood", "ICMP Flood"],a:1,s:1},
+{type:"single",q:"WAF AI+规则双引擎中，规则引擎主要防御",o:["仅 0day 攻击", "OWASP Top10 等常规 Web 攻击", "仅 BOT", "仅 CC"],a:1,s:1},
+{type:"single",q:"DDoS 高防包架构中，对攻击流量采用的是",o:["直接丢弃全部流量", "旁路引流清洗后回注正常流量", "仅限速", "仅告警"],a:1,s:1},
+{type:"multi",q:"主机安全的主要功能特性包括",o:["文件查杀（Webshell 检测）", "异常登录", "密码破解检测", "反弹 Shell 监控"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"主机安全集中运维的优势体现在",o:["安全事件控制台统一管理", "主机资产集中管理", "需登录每台服务器逐一排查", "快速构建安全可视化运维平台"],a:[0, 1, 3],s:2},
+{type:"multi",q:"主机安全漏洞管理可预警的漏洞类型包括",o:["应急漏洞", "Linux 软件漏洞", "Windows 系统漏洞", "Web-CMS 漏洞"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"主机安全高级防御可检测的威胁类型包括",o:["Webshell 探测", "Struts 漏洞利用", "代码注入攻击", "机器批量控制利用"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"主机安全的计费版本包括",o:["基础版（免费）", "轻量版", "专业版", "旗舰版"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云 DDoS 防护产品体系包括",o:["基础防护", "DDoS 高防包", "DDoS 高防 IP", "WAF"],a:[0, 1, 2],s:2},
+{type:"multi",q:"常见网络层 DDoS 攻击类型包括",o:["SYN Flood", "ACK Flood", "UDP Flood", "ICMP Flood"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"反射型 DDoS 攻击可利用的协议包括",o:["DNS", "NTP", "SSDP", "memcached"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CC 攻击常见的攻击类型包括",o:["HTTP/HTTPS GET Flood", "HTTP/HTTPS POST Flood", "四层 CC", "Connection Flood"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于 DDoS 防护产品对比，下列说法正确的有",o:["基础防护免费且默认 2Gbps", "高防包仅限云内用户且免换 IP", "高防 IP 支持云内外且最高 1Tbps", "基础防护可防 CC 攻击"],a:[0, 1, 2],s:2},
+{type:"multi",q:"腾讯云 WAF 可防御的攻击包括",o:["SQL 注入", "XSS 跨站脚本", "木马上传", "CSRF 跨站请求伪造"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"WAF 的高级功能包括",o:["AI+规则双引擎防护", "BOT 行为管理", "智能 CC 防护", "百 G 抗 DDoS 能力"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"SaaS 型 WAF 的特点包括",o:["通过 DNS 解析调度分配 CNAME 接入", "覆盖范围广含云上及非云上用户", "需修改源站 IP", "配合安全组避免绕过源站"],a:[0, 1, 3],s:2},
+{type:"multi",q:"负载均衡型 WAF 的特点包括",o:["与七层负载均衡 CLB 联动", "毫秒级延迟、无感知接入", "网站转发与安全防护分离、一键 bypass", "支持多地域接入"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"WAF 的 BOT 行为管理具备的能力包括",o:["实时会话追踪", "1000+ 公开 BOT 类型快速设定策略", "爬虫和 IP 情报特征识别", "50+ 会话特征定义防护策略"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"WAF 智能 CC 防护的能力包括",o:["综合源站异常响应与历史访问数据决策", "自定义 session 维度防护", "实时查看 CC 封堵状态 IP", "一键接入百 G 抗 DDoS"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于主机安全与网络安全定位的区别，正确的有",o:["主机安全侧重系统层防护（木马、漏洞）", "网络安全侧重流量层防护（DDoS、CC）", "WAF 属于网络安全产品", "主机安全可替代 DDoS 高防"],a:[0, 1, 2],s:2},
+{type:"multi",q:"主机安全异常登录检测分析的四个维度包括",o:["常用登录源 IP", "登录用户名", "登录时间", "登录地"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云安全产品中，能防 CC 攻击的有",o:["DDoS 高防包", "DDoS 高防 IP", "WAF", "基础防护（默认不防 CC）"],a:[0, 1, 2],s:2},
+{type:"multi",q:"主机安全发现漏洞、木马等攻击时，对用户的处理方式包括",o:["实时告警通知", "提供一键隔离功能", "提供恶意文件检测", "自动删除操作系统"],a:[0, 1, 2],s:2}
+];
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术考试（第十一套）— 安全产品体系 <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术考试（第十套）— 安全与防护</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术考试（第十套）— 安全与防护</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"安全与防护中，系统安全一般指什么层面的安全？",o:["操作系统安全", "网络通信安全", "数据库安全", "应用层安全"],a:0,s:1},
+{type:"single",q:"操作系统安全的核心目标是保护硬件、软件和数据资源的哪三个属性？",o:["机密性、完整性、可用性", "速度、稳定性、兼容性", "可读性、可写性、可执行性", "加密性、解密性、传输性"],a:0,s:1},
+{type:"single",q:"网络通信安全需要确保数据在传输过程中免受窃听、篡改、伪造和什么威胁？",o:["拒绝服务（DoS）", "数据压缩", "数据备份", "带宽提升"],a:0,s:1},
+{type:"single",q:"以下哪项不属于常见的安全威胁？",o:["密码被破解", "系统漏洞", "病毒攻击", "定期备份"],a:3,s:1},
+{type:"single",q:"木马攻击中，被控制的电脑常被称为什么？",o:["肉鸡", "服务器", "路由器", "防火墙"],a:0,s:1},
+{type:"single",q:"强密码策略要求密码包含哪些字符类型？",o:["仅数字", "仅字母", "大小写字母、数字和特殊字符", "仅特殊字符"],a:2,s:1},
+{type:"single",q:"企业要求员工每三个月更换一次密码，这体现的是哪种策略？",o:["密码定期更换", "密码复杂度要求", "密码管理工具", "双因素认证"],a:0,s:1},
+{type:"single",q:"LastPass 属于哪类安全工具？",o:["杀毒软件", "密码管理工具", "防火墙", "漏洞扫描工具"],a:1,s:1},
+{type:"single",q:"备份与恢复中，定期验证备份数据有效性最常用的方法是？",o:["直接删除旧备份", "通过恢复测试验证", "加密备份文件", "压缩备份文件"],a:1,s:1},
+{type:"single",q:"灾难恢复计划的主要作用是？",o:["提升系统性能", "系统故障或攻击后快速恢复", "减少带宽消耗", "加快登录速度"],a:1,s:1},
+{type:"single",q:"用户权限管理中，最小权限原则是指？",o:["给用户全部权限", "只授予完成任务所需的最小权限", "不给任何权限", "随机分配权限"],a:1,s:1},
+{type:"single",q:"Windows 系统通过什么机制管理用户权限？",o:["用户组策略", "防火墙规则", "DNS解析", "负载均衡"],a:0,s:1},
+{type:"single",q:"防火墙结合入侵检测系统（IDS）和入侵防御系统（IPS）的作用是？",o:["加速网络", "主动防御攻击", "数据备份", "压缩流量"],a:1,s:1},
+{type:"single",q:"Web应用防火墙（WAF）主要防护哪类攻击？",o:["带宽攻击", "针对Web应用程序的攻击", "物理入侵", "电力故障"],a:1,s:1},
+{type:"single",q:"以下哪项属于操作系统安全防护软件（Client端）？",o:["安全狗", "腾讯电脑管家", "云镜", "安骑士"],a:1,s:1},
+{type:"single",q:"以下哪项属于Server端安全防护软件？",o:["360", "金山", "安全狗", "Windows Defender"],a:2,s:1},
+{type:"single",q:"漏洞扫描工具 Nessus 主要用于？",o:["清除病毒", "扫描系统漏洞并提供报告", "加密通信", "加速网络"],a:1,s:1},
+{type:"single",q:"OpenVAS 可以扫描哪类漏洞？",o:["仅操作系统漏洞", "Web应用程序漏洞", "仅网络配置", "仅硬件故障"],a:1,s:1},
+{type:"single",q:"BitLocker 通过什么方式保护硬盘数据？",o:["全盘加密", "压缩文件", "删除敏感数据", "限速访问"],a:0,s:1},
+{type:"single",q:"SSL/TLS 协议主要用于？",o:["加密Web通信", "压缩图片", "加速DNS", "清理日志"],a:0,s:1},
+{type:"single",q:"加密密钥管理中，硬件安全模块简称什么？",o:["HSM", "IDS", "IPS", "WAF"],a:0,s:1},
+{type:"single",q:"日志分析工具 Splunk 主要用于？",o:["杀毒", "记录并分析系统安全事件", "加密数据", "配置防火墙"],a:1,s:1},
+{type:"single",q:"通过分析登录失败次数，可以检测哪种攻击？",o:["DDoS攻击", "暴力破解攻击", "XSS攻击", "SQL注入"],a:1,s:1},
+{type:"single",q:"安全与防护的整体策略强调？",o:["单一防护即可", "多层次、多策略的综合防护", "只依赖杀毒软件", "只依赖防火墙"],a:1,s:1},
+{type:"single",q:"以下哪项不是安全建议的内容？",o:["定期更新与维护", "实施最小权限原则", "使用安全工具与技术", "共享所有账号密码"],a:3,s:1},
+{type:"single",q:"恶意攻击、入侵他人服务器属于什么行为？",o:["合法行为", "违法犯罪行为，可被网警追责", "行业惯例", "技术测试"],a:1,s:1},
+{type:"single",q:"零信任架构的核心原则是？",o:["信任内网设备", "永不信任，始终验证", "信任所有用户", "仅验证一次"],a:1,s:1},
+{type:"single",q:"纵深防御（Defense in Depth）是指？",o:["只在边界部署防火墙", "多层安全防护相互配合", "只保护核心数据库", "仅使用一种安全产品"],a:1,s:1},
+{type:"single",q:"以下哪项属于数据安全措施中的脱敏？",o:["删除全部数据", "隐藏敏感信息但保留数据格式", "将数据公开", "将数据加密后丢失密钥"],a:1,s:1},
+{type:"single",q:"密钥管理服务（KMS）的主要作用是？",o:["生成随机密码", "安全管理加密密钥", "清理日志", "加速网络"],a:1,s:1},
+{type:"single",q:"堡垒机主要用于？",o:["DDoS防护", "运维审计和权限管理", "数据加密", "CDN加速"],a:1,s:1},
+{type:"single",q:"以下哪项属于主机安全中的基线检查？",o:["检测可疑进程", "检查系统配置是否符合安全规范", "扫描开放端口", "清理病毒"],a:1,s:1},
+{type:"single",q:"入侵检测系统（IDS）与入侵防御系统（IPS）的主要区别是？",o:["IDS只检测告警，IPS可主动阻断", "两者完全相同", "IDS用于加密", "IPS用于备份"],a:0,s:1},
+{type:"single",q:"SSL证书部署后，网站访问协议变为？",o:["HTTP", "HTTPS", "FTP", "SMTP"],a:1,s:1},
+{type:"single",q:"在多租户云环境中，最小权限原则有助于？",o:["提升共享效率", "降低被攻击时的潜在危害", "加快登录", "减少带宽"],a:1,s:1},
+{type:"single",q:"以下哪项不是操作系统安全风险来源？",o:["操作系统漏洞（如永恒之蓝）", "业务应用漏洞（如SQL注入）", "弱密码、空密码", "定期更新系统"],a:3,s:1},
+{type:"single",q:"“永恒之蓝”属于哪类安全风险？",o:["操作系统漏洞", "弱密码", "不当操作", "数据泄露"],a:0,s:1},
+{type:"single",q:"不当操作带来的安全风险主要指？",o:["安装运行未知来源的软件或脚本", "设置复杂密码", "定期备份", "启用防火墙"],a:0,s:1},
+{type:"single",q:"数据泄露属于哪类安全威胁？",o:["系统漏洞", "数据被泄露", "病毒攻击", "CC攻击"],a:1,s:1},
+{type:"single",q:"“薅羊毛”在安全防护语境下通常指？",o:["正常促销活动", "利用系统规则漏洞谋取利益的行为", "数据备份", "防火墙配置"],a:1,s:1},
+{type:"single",q:"以下关于DDoS与CC攻击区别的描述，正确的是？",o:["两者完全相同", "DDoS消耗带宽，CC消耗连接数和性能", "CC消耗带宽，DDoS消耗性能", "两者都不消耗资源"],a:1,s:1},
+{type:"single",q:"杀毒软件（如Windows Defender）的核心功能是？",o:["检测和清除病毒与恶意软件", "配置防火墙", "加密硬盘", "扫描漏洞"],a:0,s:1},
+{type:"single",q:"杀毒软件需定期更新什么以检测最新恶意软件？",o:["操作系统", "病毒库", "浏览器", "防火墙规则"],a:1,s:1},
+{type:"single",q:"应用层防火墙可对什么进行监控和控制？",o:["所有硬件", "特定应用程序的流量", "电力设备", "网络连接线"],a:1,s:1},
+{type:"single",q:"安全狗、云锁等服务器安全软件提供什么功能？",o:["实时监控，防止暴力破解和恶意入侵", "仅备份数据", "仅加速网络", "仅清理日志"],a:0,s:1},
+{type:"single",q:"日志分析工具在合规性检查中的作用是？",o:["删除日志", "检查系统是否符合法规和安全策略", "加密日志", "压缩日志"],a:1,s:1},
+{type:"single",q:"系统与软件更新（打补丁）的主要目的是？",o:["改变界面", "修复已知漏洞提升安全性", "增加广告", "降低性能"],a:1,s:1},
+{type:"single",q:"以下哪项属于网络通信安全领域的防护？",o:["强密码策略", "防火墙与WAF", "数据备份", "杀毒软件"],a:1,s:1},
+{type:"single",q:"网络洪水攻击（如DDoS）属于哪类攻击？",o:["资源耗尽攻击", "拒绝式服务攻击", "应用层攻击", "物理攻击"],a:1,s:1},
+{type:"single",q:"攻击者通过大量创建进程消耗系统资源，属于哪种攻击？",o:["资源耗尽攻击", "带宽攻击", "DNS攻击", "ICMP攻击"],a:0,s:1},
+{type:"single",q:"针对Web应用漏洞使网站无法访问，属于哪类攻击？",o:["应用层攻击", "带宽攻击", "物理攻击", "电力攻击"],a:0,s:1},
+{type:"single",q:"DDoS防护中，流量清洗过滤的是？",o:["正常流量", "恶意流量", "所有流量", "加密流量"],a:1,s:1},
+{type:"single",q:"请求过滤主要通过什么产品防护应用层攻击？",o:["仅路由器", "防火墙和WAF", "仅交换机", "仅网线"],a:1,s:1},
+{type:"single",q:"SQL注入攻击主要针对哪类系统？",o:["操作系统", "数据库/Web应用", "硬件固件", "电力设备"],a:1,s:1},
+{type:"single",q:"跨站脚本攻击（XSS）主要通过什么方式危害用户？",o:["耗尽带宽", "在页面中注入恶意脚本", "加密数据", "删除文件"],a:1,s:1},
+{type:"single",q:"关于防火墙启用，正确的做法是？",o:["关闭所有端口", "按策略开放业务端口，禁止非必要端口", "开放全部端口", "不配置任何规则"],a:1,s:1},
+{type:"single",q:"以下哪项属于通信加密协议？",o:["HTTP", "SSL/TLS", "FTP明文", "Telnet"],a:1,s:1},
+{type:"single",q:"安全事件记录、异常检测、合规性检查是哪种工具的用途？",o:["漏洞扫描工具", "日志分析工具", "杀毒软件", "防火墙"],a:1,s:1},
+{type:"single",q:"在DDoS防护中，BGP高防一般通过什么方式引流？",o:["直接连接源站", "将流量牵引到高防清洗中心", "关闭服务器", "降低带宽"],a:1,s:1},
+{type:"single",q:"入侵防御系统（IPS）相较IDS的额外能力是？",o:["仅记录日志", "可主动阻断恶意流量", "仅生成报告", "仅分析带宽"],a:1,s:1},
+{type:"multi",q:"常见的安全威胁包括（多选）",o:["密码被破解", "系统漏洞", "病毒木马攻击", "数据泄露"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"操作系统安全风险来源包括（多选）",o:["操作系统漏洞（如永恒之蓝）", "业务应用漏洞（如SQL注入）", "弱密码、空密码等不当设置", "安装未知来源软件等不当操作"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"强密码策略包含哪些要求（多选）",o:["密码包含大小写字母、数字和特殊字符", "定期更换密码", "使用密码管理工具", "使用弱口令方便记忆"],a:[0, 1, 2],s:2},
+{type:"multi",q:"备份与恢复包含哪些内容（多选）",o:["数据备份", "制定灾难恢复计划", "定期验证备份数据", "删除所有历史数据"],a:[0, 1, 2],s:2},
+{type:"multi",q:"用户权限管理的关键措施包括（多选）",o:["用户与组管理", "设置用户权限控制", "最小权限原则", "给所有用户管理员权限"],a:[0, 1, 2],s:2},
+{type:"multi",q:"防火墙相关的安全防护能力包括（多选）",o:["配置防火墙规则", "入侵检测与防御（IDS/IPS）", "应用层防火墙（如WAF）", "关闭所有网络访问"],a:[0, 1, 2],s:2},
+{type:"multi",q:"主机安全防护软件的功能包括（多选）",o:["病毒检测与清除", "实时防护", "定期更新病毒库", "关闭系统防火墙"],a:[0, 1, 2],s:2},
+{type:"multi",q:"漏洞扫描工具可以完成（多选）",o:["系统漏洞扫描", "应用程序漏洞扫描", "提供漏洞修复建议", "自动修复所有硬件故障"],a:[0, 1, 2],s:2},
+{type:"multi",q:"加密技术包含哪些方面（多选）",o:["数据加密（如BitLocker）", "通信加密（如SSL/TLS）", "加密密钥管理（如HSM）", "明文存储所有数据"],a:[0, 1, 2],s:2},
+{type:"multi",q:"日志分析工具可用于（多选）",o:["安全事件记录", "异常行为检测", "合规性检查", "删除系统日志"],a:[0, 1, 2],s:2},
+{type:"multi",q:"网络通信安全中网络攻击主要分为（多选）",o:["带宽攻击", "应用攻击", "电力攻击", "物理盗窃"],a:[0, 1],s:2},
+{type:"multi",q:"带宽攻击的特点包括（多选）",o:["通过大量数据包淹没目标带宽", "常使用源地址欺骗", "消耗服务器连接数资源", "可影响路由器、防火墙等设备"],a:[0, 1, 3],s:2},
+{type:"multi",q:"应用攻击（CC攻击）的特点包括（多选）",o:["发送大量无法完成的不完全请求连接", "消耗服务器性能和连接数", "一般对带宽消耗不大", "使用TCP/HTTP协议行为占用计算资源"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"DDoS攻击防护一般可采用（多选）",o:["BGP高防产品", "流量清洗技术", "分布式架构", "智能算法识别恶意流量"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CC攻击（连接数攻击）的常见手法包括（多选）",o:["半连接攻击（SYN Flood）", "全连接攻击", "UDP洪水攻击", "ICMP FLOOD攻击"],a:[0, 1],s:2},
+{type:"multi",q:"数据安全相关措施包括（多选）",o:["数据加密", "数据脱敏（掩码）", "密钥管理（KMS）", "访问控制与审计"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"零信任与纵深防御理念包括（多选）",o:["永不信任，始终验证", "最小权限原则", "多层安全防护（纵深防御）", "仅依赖边界防火墙即可"],a:[0, 1, 2],s:2},
+{type:"multi",q:"操作系统安全防护建议包括（多选）",o:["定期系统与软件更新", "启用防火墙按策略开放端口", "部署安全软件", "使用弱密码方便记忆"],a:[0, 1, 2],s:2},
+{type:"multi",q:"网络安全的三要素（CIA）包括（多选）",o:["机密性", "完整性", "可用性", "不可否认性"],a:[0, 1, 2],s:2},
+{type:"multi",q:"安全总结中提到操作系统安全的基础作用包括（多选）",o:["通过用户权限管理保护系统安全", "通过防火墙保护系统安全", "通过加密技术保护系统安全", "无需任何防护"],a:[0, 1, 2],s:2}
+];
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术考试（第十套）— 安全与防护 <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

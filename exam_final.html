@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术综合考试（终极版）</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术综合考试（终极版）</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"Linux系统中，用于查看当前登录用户的命令是",o:["whoami", "who", "id", "w"],a:1,s:1},
+{type:"single",q:"以下哪个命令可以实时监控系统资源使用情况",o:["ps", "top", "ls", "df"],a:1,s:1},
+{type:"single",q:"Linux中，/etc/fstab文件的作用是",o:["用户管理", "文件系统挂载配置", "网络配置", "进程管理"],a:1,s:1},
+{type:"single",q:"chmod 644 file命令设置的权限是",o:["rwxr-xr-x", "rw-r--r--", "rw-------", "rwx------"],a:1,s:1},
+{type:"single",q:"以下哪个信号可以强制终止进程",o:["SIGTERM(15)", "SIGKILL(9)", "SIGHUP(1)", "SIGINT(2)"],a:1,s:1},
+{type:"single",q:"Linux中，查看内核版本的命令是",o:["cat /etc/os-release", "uname -r", "hostnamectl", "lsb_release -a"],a:1,s:1},
+{type:"single",q:"Linux中，将前台进程放到后台运行的快捷键是",o:["Ctrl+C", "Ctrl+Z", "Ctrl+D", "Ctrl+L"],a:1,s:1},
+{type:"single",q:"Linux中，查看文件最后10行的命令是",o:["head -10", "tail -10", "cat -10", "more -10"],a:1,s:1},
+{type:"single",q:"Windows系统中，查看网络连接状态的命令是",o:["ipconfig", "netstat", "ping", "tracert"],a:1,s:1},
+{type:"single",q:"以下哪个不是Linux的Shell",o:["bash", "zsh", "powershell", "sh"],a:2,s:1},
+{type:"single",q:"Linux中，find命令和grep命令的区别是",o:["完全相同", "find搜索文件名，grep搜索文件内容", "find搜索内容，grep搜索文件名", "find只能搜索目录"],a:1,s:1},
+{type:"single",q:"Linux中，/var/log/messages记录的是",o:["用户登录日志", "系统通用日志", "安全审计日志", "邮件日志"],a:1,s:1},
+{type:"single",q:"systemctl disable命令的作用是",o:["启动服务", "停止服务", "取消服务开机自启", "重启服务"],a:2,s:1},
+{type:"single",q:"Linux中，查看磁盘分区信息的命令是",o:["du -h", "df -h", "fdisk -l", "lsblk"],a:2,s:1},
+{type:"single",q:"Linux中，将命令输出追加到文件末尾的符号是",o:[">", ">>", "|", "<<"],a:1,s:1},
+{type:"single",q:"腾讯云CVM的实例规格中，M6代表",o:["标准型", "计算型", "内存型", "GPU型"],a:2,s:1},
+{type:"single",q:"云服务器的系统盘类型不包括",o:["高性能云硬盘", "SSD云硬盘", "增强型SSD云硬盘", "SATA云硬盘"],a:3,s:1},
+{type:"single",q:"弹性伸缩AS的冷却时间的作用是",o:["暂停服务", "避免频繁扩缩容", "数据备份", "网络限速"],a:1,s:1},
+{type:"single",q:"以下哪种不是腾讯云CVM的计费模式",o:["包年包月", "按量计费", "竞价实例", "永久买断"],a:3,s:1},
+{type:"single",q:"云服务器安全组规则的协议类型不包括",o:["TCP", "UDP", "ICMP", "FTP"],a:3,s:1},
+{type:"single",q:"腾讯云CVM支持的登录方式不包括",o:["密码登录", "密钥对登录", "VNC登录", "指纹登录"],a:3,s:1},
+{type:"single",q:"弹性公网IP(EIP)可以绑定的资源不包括",o:["CVM", "NAT网关", "CLB", "Redis"],a:3,s:1},
+{type:"single",q:"云服务器的重装操作系统会",o:["保留系统盘数据", "清空系统盘数据", "清空所有磁盘", "不影响任何数据"],a:1,s:1},
+{type:"single",q:"腾讯云CVM的可用区(AZ)的特点是",o:["同一个城市", "同一机房内逻辑隔离的区域", "全球统一", "跨地域分布"],a:1,s:1},
+{type:"single",q:"云服务器实例规格中的vCPU和内存比例",o:["固定不变", "可以根据规格族调整", "只有1:1", "只有1:2"],a:1,s:1},
+{type:"single",q:"以下哪种场景最适合使用竞价实例",o:["数据库服务", "长期Web服务", "无状态批处理任务", "核心交易系统"],a:2,s:1},
+{type:"single",q:"腾讯云CVM的自动续费可以避免",o:["数据丢失", "实例到期被释放", "网络中断", "安全漏洞"],a:1,s:1},
+{type:"single",q:"云服务器的安全组是有状态的，这意味着",o:["只检查入站", "只检查出站", "自动允许响应流量", "不检查流量"],a:2,s:1},
+{type:"single",q:"腾讯云镜像市场的作用是",o:["数据备份", "提供预装软件的镜像", "网络加速", "安全防护"],a:1,s:1},
+{type:"single",q:"云服务器的密钥对登录中，私钥应该",o:["上传到服务器", "安全保存在本地", "分享给同事", "发送给腾讯云"],a:1,s:1},
+{type:"single",q:"云硬盘CBS的全称是",o:["Cloud Block Storage", "Cloud Base Server", "Cloud Backup Service", "Cloud Block Server"],a:0,s:1},
+{type:"single",q:"云硬盘的IOPS指标衡量的是",o:["存储容量", "每秒读写操作次数", "读写延迟", "网络带宽"],a:1,s:1},
+{type:"single",q:"增强型SSD云硬盘相比普通SSD的优势是",o:["价格更低", "性能更高且稳定", "容量更大", "支持更多格式"],a:1,s:1},
+{type:"single",q:"云硬盘快照的计费方式是",o:["免费", "按快照容量计费", "按次数计费", "包年包月"],a:1,s:1},
+{type:"single",q:"云硬盘扩容时，以下说法正确的是",o:["只能扩大不能缩小", "可以随意扩大缩小", "需要先卸载", "只能扩大系统盘"],a:0,s:1},
+{type:"single",q:"云硬盘挂载到云服务器后，需要",o:["直接使用", "格式化并挂载文件系统", "重启服务器", "购买许可证"],a:1,s:1},
+{type:"single",q:"以下哪种不是云硬盘的性能指标",o:["IOPS", "吞吐量", "容量", "CPU使用率"],a:3,s:1},
+{type:"single",q:"云硬盘的快照策略支持",o:["只支持手动", "只支持自动", "支持手动和自动定时", "不支持快照"],a:2,s:1},
+{type:"single",q:"域名的层级结构中，最右边的是",o:["一级域名", "二级域名", "三级域名", "根域"],a:3,s:1},
+{type:"single",q:"DNS解析中，递归查询的特点是",o:["客户端多次查询", "由DNS服务器完成全部查询", "每次查询根服务器", "只查询本地DNS"],a:1,s:1},
+{type:"single",q:"DNS中，A记录的作用是",o:["域名到IPv4映射", "域名到IPv6映射", "域名别名", "邮件服务器"],a:0,s:1},
+{type:"single",q:"DNS中，CNAME记录的作用是",o:["域名到IP映射", "域名到域名的别名", "邮件服务器", "文本记录"],a:1,s:1},
+{type:"single",q:"DNS中，MX记录用于",o:["域名解析", "邮件服务器配置", "负载均衡", "CDN加速"],a:1,s:1},
+{type:"single",q:"DNS中，NS记录的作用是",o:["指定域名的权威DNS服务器", "域名到IP映射", "邮件服务器", "文本信息"],a:0,s:1},
+{type:"single",q:"DNS中，TXT记录常用于",o:["域名解析", "SPF反垃圾邮件验证", "邮件服务器", "负载均衡"],a:1,s:1},
+{type:"single",q:"域名注册后，需要定期做什么操作",o:["修改DNS", "续费", "重新备案", "更换服务器"],a:1,s:1},
+{type:"single",q:"以下哪个不是顶级域名",o:[".com", ".cn", ".http", ".org"],a:2,s:1},
+{type:"single",q:"DNS解析中，迭代查询的特点是",o:["服务器返回最佳答案，客户端多次查询", "服务器完成全部查询", "客户端只查询一次", "不需要根服务器"],a:0,s:1},
+{type:"single",q:"腾讯云DNSPod支持的记录类型不包括",o:["A", "CNAME", "HTML", "MX"],a:2,s:1},
+{type:"single",q:"域名解析生效时间受什么影响",o:["TTL设置", "服务器配置", "网络带宽", "CPU性能"],a:0,s:1},
+{type:"single",q:"DNS的AAAA记录用于解析",o:["IPv4地址", "IPv6地址", "域名别名", "文本记录"],a:1,s:1},
+{type:"single",q:"域名备案信息发生变更后，需要",o:["无需操作", "进行变更备案", "重新注册域名", "更换服务器"],a:1,s:1},
+{type:"single",q:"SSL证书的主要作用是",o:["加速网站访问", "数据加密传输", "提高搜索排名", "减少带宽消耗"],a:1,s:1},
+{type:"single",q:"HTTPS默认端口是",o:["80", "443", "8080", "3000"],a:1,s:1},
+{type:"single",q:"SSL证书中，验证级别最高的是",o:["DV证书", "OV证书", "EV证书", "免费证书"],a:2,s:1},
+{type:"single",q:"DV证书的特点是",o:["验证企业信息", "只验证域名所有权", "验证扩展信息", "不需要验证"],a:1,s:1},
+{type:"single",q:"SSL证书过期后，浏览器会",o:["正常访问", "显示安全警告", "自动续期", "拒绝访问"],a:1,s:1},
+{type:"single",q:"ICP备案的审批机构是",o:["公安部", "工信部", "网信办", "市场监管局"],a:1,s:1},
+{type:"single",q:"以下哪种情况不需要ICP备案",o:["经营性网站", "企业官网", "使用海外服务器的网站", "论坛社区"],a:2,s:1},
+{type:"single",q:"企业备案和个人备案的主要区别是",o:["费用不同", "审核时间不同", "所需材料不同", "有效期不同"],a:2,s:1},
+{type:"single",q:"ICP备案号的格式通常是",o:["纯数字", "京ICP备XXXXXXXX号", "字母+数字", "纯字母"],a:1,s:1},
+{type:"single",q:"SSL证书中，通配符证书的作用是",o:["只保护一个域名", "保护主域名及所有子域名", "只保护IP", "只保护邮箱"],a:1,s:1},
+{type:"single",q:"OSI七层模型中，HTTP协议工作在",o:["传输层", "网络层", "应用层", "会话层"],a:2,s:1},
+{type:"single",q:"TCP和UDP的主要区别是",o:["速度不同", "TCP面向连接，UDP无连接", "UDP更可靠", "TCP不能传输大数据"],a:1,s:1},
+{type:"single",q:"IPv4地址由多少位二进制组成",o:["16位", "32位", "64位", "128位"],a:1,s:1},
+{type:"single",q:"子网掩码255.255.255.0对应的CIDR是",o:["/8", "/16", "/24", "/32"],a:2,s:1},
+{type:"single",q:"TCP三次握手中，第二步服务器发送",o:["SYN", "ACK", "SYN+ACK", "FIN"],a:2,s:1},
+{type:"single",q:"以下哪个是C类私有IP地址段",o:["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"],a:2,s:1},
+{type:"single",q:"ping命令使用的协议是",o:["TCP", "UDP", "ICMP", "ARP"],a:2,s:1},
+{type:"single",q:"以下哪个端口是SSH服务端口",o:["21", "22", "23", "25"],a:1,s:1},
+{type:"single",q:"网络中，MAC地址工作在OSI模型的",o:["物理层", "数据链路层", "网络层", "传输层"],a:1,s:1},
+{type:"single",q:"ARP协议的作用是",o:["IP到MAC地址解析", "域名到IP解析", "路由选择", "数据加密"],a:0,s:1},
+{type:"single",q:"DHCP协议的作用是",o:["域名解析", "自动分配IP地址", "路由选择", "数据加密"],a:1,s:1},
+{type:"single",q:"IPv6地址的长度是",o:["32位", "64位", "128位", "256位"],a:2,s:1},
+{type:"single",q:"路由表中0.0.0.0/0表示",o:["本地回环", "默认路由", "广播地址", "组播地址"],a:1,s:1},
+{type:"single",q:"VPC的全称是",o:["Virtual Private Cloud", "Virtual Public Cloud", "Virtual Private Computer", "Visual Private Cloud"],a:0,s:1},
+{type:"single",q:"VPC中，子网的作用是",o:["连接公网", "划分网络空间", "加密数据", "加速访问"],a:1,s:1},
+{type:"single",q:"VPC安全组的作用是",o:["数据备份", "流量计费", "控制进出虚拟机的网络流量", "DNS解析"],a:2,s:1},
+{type:"single",q:"VPC中ACL工作在",o:["实例级别", "子网级别", "VPC级别", "账号级别"],a:1,s:1},
+{type:"single",q:"VPC的CIDR块创建后",o:["可以随意修改", "不能修改", "只能扩大", "只能缩小"],a:1,s:1},
+{type:"single",q:"VPC中，路由表的作用是",o:["分配IP地址", "控制流量转发路径", "加密数据", "监控流量"],a:1,s:1},
+{type:"single",q:"安全组和ACL的区别是",o:["完全相同", "ACL无状态，安全组有状态", "ACL有状态，安全组无状态", "ACL只支持TCP"],a:1,s:1},
+{type:"single",q:"VPC中，子网的可用IP数等于",o:["总IP数", "总IP数减2", "总IP数减1", "总IP数减3"],a:1,s:1},
+{type:"single",q:"以下哪种不是VPC的网络功能",o:["子网", "路由表", "安全组", "CDN加速"],a:3,s:1},
+{type:"single",q:"VPC中，公网网关的作用是",o:["NAT转换", "连接公网", "流量计费", "数据加密"],a:1,s:1},
+{type:"single",q:"弹性网卡ENI的主要用途是",o:["增加存储", "绑定多个IP实现多网卡", "加速计算", "数据备份"],a:1,s:1},
+{type:"single",q:"VPC终端节点的作用是",o:["连接公网", "私密访问终端节点服务", "数据加密", "DNS解析"],a:1,s:1},
+{type:"single",q:"VPC安全组规则的优先级范围是",o:["0-100", "1-100", "0-9999", "1-9999"],a:1,s:1},
+{type:"single",q:"以下哪个不是VPC的核心组件",o:["子网", "路由表", "安全组", "CDN"],a:3,s:1},
+{type:"single",q:"VPC中，网络ACL默认规则是",o:["全部允许", "全部拒绝", "只允许HTTP", "只允许SSH"],a:1,s:1},
+{type:"single",q:"NAT网关的SNAT功能用于",o:["内网访问外网", "外网访问内网", "内网之间互访", "数据加密"],a:0,s:1},
+{type:"single",q:"NAT网关的DNAT功能用于",o:["内网访问外网", "外网访问内网", "内网之间互访", "数据加密"],a:1,s:1},
+{type:"single",q:"对等连接(Peering)的作用是",o:["不同地域VPC互通", "同地域VPC之间互通", "连接CDN", "连接数据库"],a:1,s:1},
+{type:"single",q:"对等连接中，同地域连接",o:["收费", "免费", "按流量收费", "按带宽收费"],a:1,s:1},
+{type:"single",q:"VPN连接中，IPSec VPN主要用于",o:["网站加速", "远程办公加密连接", "DNS解析", "负载均衡"],a:1,s:1},
+{type:"single",q:"专线接入(DC)的特点是",o:["通过公网连接", "带宽共享", "高可靠低延迟私有连接", "免费使用"],a:2,s:1},
+{type:"single",q:"云联网(CCN)的主要作用是",o:["单VPC内部网络", "多VPC和多地域网络互通", "网站加速", "数据备份"],a:1,s:1},
+{type:"single",q:"VPN连接中，IKE协议的作用是",o:["数据传输", "密钥协商", "路由选择", "负载均衡"],a:1,s:1},
+{type:"single",q:"专线接入中，物理专线的带宽通常从",o:["1Mbps", "10Mbps", "50Mbps", "100Mbps"],a:3,s:1},
+{type:"single",q:"云联网中，跨地域带宽上限默认是",o:["1Gbps", "5Gbps", "10Gbps", "无上限"],a:2,s:1},
+{type:"single",q:"对等连接中，跨地域连接的计费方式是",o:["免费", "按带宽计费", "按流量计费", "包年包月"],a:2,s:1},
+{type:"single",q:"NAT网关支持的最大带宽是",o:["1Gbps", "5Gbps", "10Gbps", "20Gbps"],a:2,s:1},
+{type:"single",q:"CLB的全称是",o:["Cloud Load Balancer", "Cloud Link Base", "Compute Load Balancer", "Cloud Load Backup"],a:0,s:1},
+{type:"single",q:"CLB四层负载均衡对应OSI模型的",o:["应用层", "传输层", "网络层", "数据链路层"],a:1,s:1},
+{type:"single",q:"CLB七层负载均衡支持的协议是",o:["TCP", "UDP", "HTTP/HTTPS", "FTP"],a:2,s:1},
+{type:"single",q:"CLB健康检查的目的是",o:["监控流量", "检测后端服务器是否正常", "计费统计", "数据加密"],a:1,s:1},
+{type:"single",q:"CLB会话保持(粘性会话)的作用是",o:["提高安全性", "同一客户端转发到同一后端", "增加带宽", "降低延迟"],a:1,s:1},
+{type:"single",q:"CLB支持的负载均衡算法不包括",o:["轮询", "加权轮询", "最小连接数", "随机森林"],a:3,s:1},
+{type:"single",q:"CLB的转发规则可以基于",o:["只能域名", "只能URL路径", "域名和URL路径", "只能端口"],a:2,s:1},
+{type:"single",q:"CLB跨可用区部署的作用是",o:["数据备份", "高可用", "数据加密", "流量加速"],a:1,s:1},
+{type:"single",q:"MySQL默认端口号是",o:["3306", "5432", "1521", "27017"],a:0,s:1},
+{type:"single",q:"MySQL中，InnoDB存储引擎的特点是",o:["不支持事务", "支持事务和行级锁", "只支持表级锁", "不支持外键"],a:1,s:1},
+{type:"single",q:"MySQL中，主键的作用是",o:["允许重复值", "唯一标识每条记录", "加速排序", "数据加密"],a:1,s:1},
+{type:"single",q:"MySQL中，索引的作用是",o:["减少存储空间", "加快数据查询速度", "保证数据安全", "简化SQL语法"],a:1,s:1},
+{type:"single",q:"以下哪个SQL语句用于删除表数据",o:["DELETE", "DROP", "REMOVE", "CLEAR"],a:0,s:1},
+{type:"single",q:"云数据库MySQL高可用版最少需要",o:["1个节点", "2个节点", "3个节点", "4个节点"],a:1,s:1},
+{type:"single",q:"MySQL主从复制的作用是",o:["数据加密", "数据备份和读写分离", "提高写入速度", "减少存储空间"],a:1,s:1},
+{type:"single",q:"MySQL事务的ACID特性不包括",o:["原子性", "一致性", "隔离性", "可用性"],a:3,s:1},
+{type:"single",q:"云数据库MySQL备份中，物理备份基于",o:["mysqldump", "目录文件", "binlog", "SQL语句"],a:1,s:1},
+{type:"single",q:"MySQL中，VARCHAR(100)表示",o:["固定占用100字节", "最多存储100个字符", "只能存100个数字", "以上都不对"],a:1,s:1},
+{type:"multi",q:"以下哪些是Linux发行版系统",o:["Ubuntu", "Unix", "CentOS", "Rocky"],a:[0, 2, 3],s:2},
+{type:"multi",q:"Linux系统的基本权限包括",o:["读(r)", "写(w)", "执行(x)", "删除(d)"],a:[0, 1, 2],s:2},
+{type:"multi",q:"以下哪些是Linux的进程管理命令",o:["ps", "kill", "top", "netstat"],a:[0, 1, 2],s:2},
+{type:"multi",q:"Linux中，系统日志文件通常位于",o:["/var/log", "/tmp", "/etc/log", "/var/log/messages"],a:[0, 3],s:2},
+{type:"multi",q:"云服务器CVM支持的登录方式包括",o:["密码登录", "密钥对登录", "VNC登录", "扫码登录"],a:[0, 1, 2],s:2},
+{type:"multi",q:"以下哪些是腾讯云的镜像类型",o:["公共镜像", "自定义镜像", "共享镜像", "市场镜像"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"弹性伸缩AS支持的策略包括",o:["定时策略", "动态策略", "手动策略", "告警策略"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"云服务器VM由哪些虚拟资源组成",o:["vCPU", "vMem", "vDisk", "网络"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些是常见的虚拟化软件",o:["KVM", "VMware", "Hyper-V", "Nginx"],a:[0, 1, 2],s:2},
+{type:"multi",q:"云硬盘的性能指标包括",o:["IOPS", "读写速度", "容量", "读写时延"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"云硬盘支持的计费方式有",o:["包年包月", "按量计费", "一次性买断", "免费使用"],a:[0, 1],s:2},
+{type:"multi",q:"DNS解析中，以下哪些是DNS服务器类型",o:["根名称DNS", "顶级名称DNS", "权威名称DNS", "本地名称DNS"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些是DNS的记录类型",o:["A记录", "CNAME记录", "MX记录", "TXT记录"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"SSL证书验证级别包括",o:["DV证书", "OV证书", "EV证书", "SV证书"],a:[0, 1, 2],s:2},
+{type:"multi",q:"ICP备案需要提交的材料包括",o:["身份证明", "域名证书", "网站信息", "服务器信息"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些是常见的网络协议",o:["TCP", "UDP", "HTTP", "FTP"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些是私有IP地址段",o:["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "8.8.8.0/24"],a:[0, 1, 2],s:2},
+{type:"multi",q:"TCP/IP四层模型包括",o:["应用层", "传输层", "网际层", "网络接口层"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些是云私有网络VPC的特性",o:["自主可控", "弹性可扩展", "安全隔离", "丰富接入"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"VPC的核心组件包括",o:["子网", "路由表", "安全组", "网络ACL"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"VPC安全组可以配置的协议包括",o:["TCP", "UDP", "ICMP", "ALL"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"NAT网关的主要功能包括",o:["SNAT", "DNAT", "数据加密", "病毒查杀"],a:[0, 1],s:2},
+{type:"multi",q:"以下哪些属于云上网络连接产品",o:["NAT网关", "对等连接", "VPN连接", "专线接入"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"对等连接的使用场景包括",o:["不同VPC互通", "不同地域互通", "不同账号互通", "不同云厂商互通"],a:[0, 1, 2],s:2},
+{type:"multi",q:"CLB支持的协议包括",o:["HTTP", "HTTPS", "TCP", "UDP"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CLB的负载均衡算法包括",o:["轮询", "加权轮询", "最小连接数", "IP哈希"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CLB健康检查支持的方式包括",o:["HTTP检测", "TCP检测", "UDP检测", "ICMP检测"],a:[0, 1],s:2},
+{type:"multi",q:"以下哪些是MySQL支持的数据类型",o:["INT", "VARCHAR", "TEXT", "REDIS"],a:[0, 1, 2],s:2},
+{type:"multi",q:"MySQL的索引类型包括",o:["主键索引", "唯一索引", "普通索引", "全文索引"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL的备份方式包括",o:["物理备份", "逻辑备份", "增量备份", "差异备份"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL事务的ACID特性包括",o:["原子性", "一致性", "隔离性", "持久性"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis支持的数据结构包括",o:["String", "List", "Hash", "Set"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis的持久化方式包括",o:["RDB", "AOF", "RDB+AOF混合", "RAID"],a:[0, 1, 2],s:2},
+{type:"multi",q:"Redis的应用场景包括",o:["缓存", "会话管理", "排行榜", "消息队列"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Redis的部署架构包括",o:["单机", "主从", "哨兵", "集群"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的存储类型包括",o:["标准存储", "低频存储", "归档存储", "冷归档存储"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"COS的访问方式包括",o:["控制台", "API", "SDK", "CLI"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"CDN加速适用的场景包括",o:["网站加速", "下载加速", "点播加速", "直播加速"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下哪些属于网络安全产品",o:["DDoS防护", "WAF", "主机安全", "SSL证书"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"常见的网络攻击类型包括",o:["DDoS攻击", "SQL注入", "XSS攻击", "暴力破解"],a:[0, 1, 2, 3],s:2}
+];
+;
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术综合考试（终极版） <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

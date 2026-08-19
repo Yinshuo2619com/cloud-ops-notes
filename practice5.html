@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史练习·云安全</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="title">历史练习·云安全</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers"><div class="q-grid" id="qGrid"></div></div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+<script>
+const examData = [
+{type:"single",q:"下列腾讯云主机安全组件，描述正确的是？",o:["腾讯云主机安全组件是一系列软件的组成，可提供任何类型的安全防御","腾讯云主机安全组件会导致云服务器性能下降","腾讯云主机安全组件主要压力在平台上，并不会导致客户云服务器性能大量下降","以上皆对"],a:2,s:2},
+{type:"single",q:"计算机信息安全是指",o:["保障计算机使用者的人身安全","计算机能正常运行","计算机不被盗窃","计算机中的信息不被泄露、篡改和破坏"],a:3,s:2},
+{type:"single",q:"发现电脑染有病毒后，最为彻底的清除方法是",o:["用杀毒软件处理","用查毒软件处理","删除中毒文件","全部格式化并重装系统"],a:3,s:2},
+{type:"single",q:"下列说法错误的是",o:["用杀毒软件将一张磁盘杀毒后，该磁盘就没有病毒了","计算机病毒在某种条件下被激活之后，才会起到干扰和破坏作用","计算机病毒是人为编译的计算机程序","尽量做到专机专用或安装正版软件，才是预防计算机病毒的有效措施"],a:0,s:2},
+{type:"single",q:"以下哪项不属于敏感信息",o:["源代码","用户数据","薪酬","腾讯云官网文档"],a:3,s:2},
+{type:"single",q:"关于各类防火墙功能，以下说法错误的是",o:["防火墙能隐藏内部IP地址","防火墙能控制进出内网的信息流向和信息包","防火墙能提供VPN功能","防火墙能阻止来自内部的操作不合规风险"],a:3,s:2},
+{type:"single",q:"为防止计算机硬件突发故障或病毒入侵的破坏，对于重要的数据文件和资料应",o:["做定期备份，保存在移动硬盘或U盘中","保存在电脑硬盘中","加密保存在电脑硬盘中","压缩后保存在电脑硬盘中"],a:0,s:2},
+{type:"single",q:"如果访问者有意避开系统的访问控制机制，则该访问者对网络设备及资源进行非正常使用属于____",o:["破坏数据完整性","非授权访问","信息泄露","拒绝服务攻击"],a:1,s:2},
+{type:"single",q:"网络安全的实质是保护网络的____安全",o:["系统","软件","信息","网站"],a:2,s:2},
+{type:"single",q:"计算机病毒破坏的主要对象是",o:["硬盘","磁盘驱动器","CPU","程序和数据"],a:3,s:2},
+{type:"single",q:"以下关于DDOS攻击的描述正确的是",o:["导致目标系统无法处理正常用户的请求","不需要侵入受攻击的系统","以窃取目标系统上的机密信息为目的","如果目标系统没有漏洞，远程攻击就不可能成功"],a:0,s:2},
+{type:"single",q:"计算机病毒是指",o:["编译出现错误的计算机程序","设计不完善的计算机程序","遭到人为破坏的计算机程序","以危害计算机硬件系统为目的的计算机程序"],a:3,s:2},
+{type:"single",q:"关于账号安全，下列说法错误的是",o:["多个平台使用相同的账号密码没有关系","不可以跟其他人分享自己的账号密码","设备初始密码应第一时间修改","密码泄露后应第一时间修改密码"],a:0,s:2},
+{type:"single",q:"您在腾讯云上部署了一套网站，经常受到各种攻击，您可以通过腾讯云中哪项服务可以有效防御 SQL 注入、XSS 跨站脚本、木马上传、非授权访问、OWASP攻击、CC攻击、0Day漏洞补丁、网页防篡改等？",o:["网站WAF","网站安全服务","大禹网络安全","天御业务安全防护服务"],a:0,s:2},
+{type:"single",q:"下面说法错误的是",o:["防火墙和防火墙规则集只是安全策略的技术实现","防火墙规则一般不需要太复杂，只要能实现具体需求，越简单越好","内网环境不用做安全防护，因为内网非常安全","建立一个可靠的规则集对于实现一个成功的、安全的防火墙来说是非常关键的"],a:2,s:2},
+{type:"single",q:"如下哪项不是防火墙具备的能力",o:["可以限制业务应用的访问来源","可以只允许某个客户端访问业务应用","具备NAT能力，可以进行IP地址转换、转发","可以查杀木马病毒文件"],a:3,s:2},
+{type:"single",q:"在黑客攻击技术中，____是黑客发现获得主机信息的一种最佳途径",o:["端口扫描","网络监听","口令破解","木马程序"],a:0,s:2},
+{type:"single",q:"腾讯云中的CVM，一旦持续受到攻击，且攻击流量超过了防护上限，被攻击的公网IP将会发生什么？",o:["持续接受攻击，直到攻击停止","自动升级为更高版本的防护能力","拉入黑洞路由","拒绝攻击来源连接"],a:2,s:2},
+{type:"single",q:"下列四项不属于计算机病毒特征的是",o:["潜伏性","传染性","激发性","免疫性"],a:3,s:2},
+{type:"single",q:"如果系统管理员修改了系统配置文件导致业务暂停，该操作属于",o:["破坏数据完整性","非授权访问","操作不合规","信息泄偶"],a:2,s:2},
+{type:"single",q:"下面不属于DDOS攻击的方式是",o:["SYN Flood","ICMP Flood","IP欺骗","ACK Flood"],a:2,s:2},
+{type:"single",q:"要保证网站信息传输加密的安全性，一般采取哪些措施？",o:["配置防火墙策略","及时更新服务器系统补丁","使用Web应用防火墙","SSL证书"],a:3,s:2},
+{type:"single",q:"您的网站运营于腾讯云之上，经常受到各种大流量攻击，您希望能屏蔽掉恶意流量后放行正常的流量，以上需求可以通过腾讯云哪种产品解决？",o:["您可以通过部署网站WAF来解决","您可以通过部署精细化网络ACL来解决","您可以通过部署精细化安全组来解决","您可以通过部署BGP高防来做解决"],a:3,s:2},
+{type:"single",q:"SYN Flood利用的是TCP三次握手的哪一次进行的攻击",o:["第一次","第二次","第三次","三次握手后数据包的传输攻击"],a:0,s:2},
+{type:"single",q:"下列关于软件安装的说法正确的是",o:["可以打开搜索引擎中任一搜索结果的下载链接下载安装","可以在官网下载安装某收费软件后下载破解工具进行破解","安装某软件的过程中安全软件弹出告警，可直接关闭告警继续安装软件","可以通过官网下载安装、或通过腾讯电脑软件中心下载安装"],a:3,s:2},
+{type:"single",q:"ACK Flood利用的是TCP三次握手的哪一次进行的攻击",o:["第一次","第二次","第三次","三次握手后数据包的传输攻击"],a:2,s:2},
+{type:"single",q:"计算机病毒可以使整个计算机系统瘫痪，危害极大。计算机病毒是",o:["一条命令","一段特殊的程序","一种生物病毒","一种芯片"],a:1,s:2},
+{type:"single",q:"以下哪项不符合办公电脑密码安全策略",o:["QWasxc35!","Pass@198.","KkQq!1@2..","Aa24680"],a:3,s:2},
+{type:"single",q:"临时离开办公电脑时需要做什么",o:["直接离开","锁屏后离开","关闭主机","关闭显示器"],a:1,s:2},
+{type:"single",q:"SSL协议是在____之间实现加密传输协议",o:["传输层和应用层","物理层和网络层","物理层和应用层","网络层和应用层"],a:0,s:2},
+{type:"multi",q:"服务器系统被入侵的可能原因有哪些",o:["系统存在漏洞","程序存在漏洞","代码存在漏洞","系统设置了弱密码"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"下列关于WIFI安全做法正确的是",o:["不使用公共WIFI处理敏感信息","不连接来源不明的WIFI","不使用WIFI万能钥匙类APP","公共区域禁止WIFI自动连接"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"针对各种DDOS攻击下面预防合理的方法是？",o:["可以安装安全防护软件进行防护，如安全狗、云锁等","购买DDOS高防安全产品，针对不同的DDOS攻击进行自动识别清洗、预警","抓包分析DDOS攻击数据包特征，根据攻击数据包特征配置DDOS防火墙拒绝","提高被攻击服务器带宽，以抵抗更高的DDOS攻击"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"基于安全方面的考虑，个人电脑在使用时应注意什么？",o:["设置账号密码","安装杀毒软件","我已经安装了杀毒软件，就可以安装一些第三方未知软件或浏览一些未知网页","及时更新系统补丁"],a:[0, 1, 3],s:2},
+{type:"multi",q:"关于账号密码安全，下列做法正确的是",o:["密码长度不低于8位，实际使用建议不少于16位，且包含大小写字母、数字、特殊字符的无规则无序复杂密码","定期修改账号密码","设置为账号密码一样，方便记忆","可以将账号密码放在其他人可见的区域，方便和其他人共享查阅"],a:[0, 1],s:2},
+{type:"multi",q:"下列关于上网安全做法正确的是",o:["尽量访问大型的正规网站","不访问包含不良信息的网站","不轻信接收的诸如\"幸运中奖\"等信息","不随意在不知底细的网站注册账号或提供个人信息"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"服务器系统一旦被入侵，可能会带来哪些危害？",o:["向其他平台、网站发起攻击","数据被加密或删除","被注入木马病毒，用来存储木马病毒程序文件","业务程序被停止或被用来部署违法违规网站"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"Linux操作系统中提供的安全防护工具有哪些？",o:["防火墙","selinux","日志","shell"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于木马病毒描述正确的是",o:["木马病毒是隐藏在正常程序中的一段具有特殊功能的恶意代码","木马病毒是具备破坏和删除文件、发送密码、记录键盘和攻击Dos等特殊功能的后门程序","黑客可以利用木马病毒远程控制运行有木马病毒程序的计算机","木马病毒也是人为编写的，通常需要人为干预使用"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"我们通常如何来防止密码被暴力破解",o:["设置密码登录次数，超过登录次数，自动锁定，无法继续登录","限制来源访问","设置强密码","安装安全防护软件，并开启登录限制"],a:[0, 1, 2, 3],s:2}
+];
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+function startTimer(){setInterval(()=>{if(answered)return;timerSec++;const m=String(Math.floor(timerSec/60)).padStart(2,'0');const s=String(timerSec%60).padStart(2,'0');document.getElementById('timer').textContent=`⏱ ${m}:${s}`},1000)}
+function initGrid(){let h='';for(let i=0;i<TOTAL;i++)h+=`<button id="qb${i}" onclick="goTo(${i})">${i+1}</button>`;document.getElementById('qGrid').innerHTML=h;document.getElementById('totalCount').textContent=TOTAL}
+function renderQ(){const item=examData[currentQ];const isS=item.type==='single';const tt=isS?'单选题':'多选题';document.getElementById('qHeader').innerHTML=`<span class="q-type">${tt}</span><span class="q-score">(${item.s}分)</span>`;document.getElementById('qText').textContent=item.q;const ca=isS?[item.a]:item.a;const ua=userAnswers[currentQ]||[];const isC=answered&&ua.length===ca.length&&ua.every(v=>ca.includes(v));let oh='';item.o.forEach((opt,j)=>{const sel=ua.includes(j);const isA=ca.includes(j);let cls=sel?' selected':'';if(answered){if(isA&&sel)cls=' show-correct';else if(!isA&&sel)cls=' show-wrong';else if(isA&&!sel)cls=' show-missed';else cls=''}oh+=`<div class="option-item${cls}" ${answered?'':`onclick="selectOption(${j})"`}><div class="opt-label">${LABELS[j]}</div><div class="opt-text">${opt}</div></div>`});document.getElementById('qOptions').innerHTML=oh;const rv=document.getElementById('answerReveal');if(answered){rv.style.display='block';const at=ca.map(a=>LABELS[a]).join(',');if(isC){rv.className='answer-reveal correct';rv.innerHTML=`✅ 回答正确 | 正确答案：${at}`}else{rv.className='answer-reveal wrong';const yt=ua.length>0?ua.map(a=>LABELS[a]).join(','):'未作答';rv.innerHTML=`❌ 回答错误 | 你的答案：${yt} | 正确答案：${at}`}}else{rv.style.display='none'}document.querySelectorAll('.q-grid button').forEach((b,i)=>{b.classList.remove('active');if(i===currentQ)b.classList.add('active')})}
+function selectOption(idx){if(answered)return;const item=examData[currentQ];if(item.type==='single'){userAnswers[currentQ]=[idx]}else{if(!userAnswers[currentQ])userAnswers[currentQ]=[];const p=userAnswers[currentQ].indexOf(idx);if(p>-1)userAnswers[currentQ].splice(p,1);else userAnswers[currentQ].push(idx)}renderQ();updateProgress()}
+function updateProgress(){let done=0;for(let i=0;i<TOTAL;i++){const b=document.getElementById(`qb${i}`);if(userAnswers[i]&&userAnswers[i].length>0){done++;b.classList.add('done')}else{b.classList.remove('done')}}document.getElementById('doneCount').textContent=done;document.getElementById('progressFill').style.width=(done/TOTAL*100)+'%'}
+function goTo(idx){currentQ=idx;renderQ()}
+function prevQ(){if(currentQ>0){currentQ--;renderQ()}}
+function nextQ(){if(currentQ<TOTAL-1){currentQ++;renderQ()}}
+function submitExam(){if(answered)return;let ua=0;for(let i=0;i<TOTAL;i++){if(!userAnswers[i]||userAnswers[i].length===0)ua++}if(ua>0&&!confirm(`还有 ${ua} 题未作答，确定交卷吗？`))return;let score=0,correct=0,wrong=0;examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));if(ok){score+=item.s;correct++}else{wrong++}});examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));const b=document.getElementById(`qb${i}`);b.classList.remove('done');b.classList.add(ok?'correct':'wrong')});document.getElementById('resultPanel').style.display='none';document.getElementById('questionCard').style.display='block';const mx=examData.reduce((s,t)=>s+t.s,0);document.querySelector('.top-bar .title').innerHTML=`历史练习·云安全 <span style="font-size:13px;font-weight:400;color:${score>=mx*0.6?'#4caf50':'#f44336'}">| 得分：${score}/${mx}（答对${correct}题，答错${wrong}题）</span>`;document.querySelector('.sidebar-footer').innerHTML=`<div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div><div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>`;answered=true;currentQ=0;renderQ()}
+document.addEventListener('keydown',e=>{if(answered)return;if(e.key==='ArrowLeft')prevQ();if(e.key==='ArrowRight')nextQ()});
+initGrid();renderQ();startTimer();
+let pendingLeaveUrl=null;
+function beforeUnloadHandler(e){if(answered)return;e.preventDefault();e.returnValue=''}
+window.addEventListener('beforeunload',beforeUnloadHandler);
+document.addEventListener('click',function(e){if(answered)return;const link=e.target.closest('a[href]');if(link&&!link.href.startsWith('javascript:')){e.preventDefault();pendingLeaveUrl=link.href;document.getElementById('leaveModal').classList.add('show')}});
+function interceptReload(){if(answered){location.reload();return}pendingLeaveUrl=null;document.getElementById('leaveModal').classList.add('show')}
+function closeLeaveModal(){document.getElementById('leaveModal').classList.remove('show');pendingLeaveUrl=null}
+function confirmLeave(){window.removeEventListener('beforeunload',beforeUnloadHandler);if(pendingLeaveUrl){location.href=pendingLeaveUrl}else{location.reload()}}
+</script>
+</body>
+</html>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术学习中心</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; }
+
+        /* 顶部导航 */
+        .header { background: linear-gradient(135deg, #1a73e8, #0d47a1); color: #fff; padding: 36px 0; text-align: center; box-shadow: 0 2px 12px rgba(13,71,161,0.25); }
+        .header h1 { font-size: 28px; margin-bottom: 8px; }
+        .header p { opacity: 0.85; font-size: 14px; }
+        .header .nav { margin-top: 18px; display: flex; justify-content: center; gap: 12px; }
+        .header .nav a { color: #fff; text-decoration: none; padding: 8px 24px; border-radius: 20px; background: rgba(255,255,255,0.15); transition: all 0.2s; font-size: 14px; }
+        .header .nav a:hover, .header .nav a.active { background: rgba(255,255,255,0.3); }
+
+        /* 主体 */
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        /* 区块 */
+        .section { margin-bottom: 36px; }
+        .section-title { font-size: 20px; font-weight: 700; padding: 12px 0; border-bottom: 2px solid #1a73e8; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+        .section-title .icon { font-size: 24px; }
+
+        /* 文件卡片 */
+        .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+        .file-card { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; text-decoration: none; color: #333; border-left: 4px solid transparent; }
+        .file-card:hover { box-shadow: 0 6px 16px rgba(0,0,0,0.14); transform: translateY(-2px); border-left-color: #1a73e8; }
+        .file-card .file-icon { font-size: 28px; flex-shrink: 0; }
+        .file-card .file-info { flex: 1; min-width: 0; }
+        .file-card .file-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-card .file-meta { font-size: 12px; color: #888; margin-top: 4px; }
+        .file-card .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; }
+        .badge-md { background: #e3f2fd; color: #1565c0; }
+        .badge-html { background: #e8f5e9; color: #2e7d32; }
+
+
+        /* 统计概览 */
+        .stats { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 24px auto 4px; max-width: 1000px; padding: 0 20px; }
+        .stat-card { background: #fff; border-radius: 12px; padding: 18px 28px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); text-align: center; min-width: 150px; }
+        .stat-card .stat-num { font-size: 28px; font-weight: 700; color: #1a73e8; }
+        .stat-card .stat-label { font-size: 13px; color: #888; margin-top: 4px; }
+
+        /* 响应式 */
+        @media (max-width: 600px) {
+            .file-grid { grid-template-columns: 1fr; }
+        }
+
+        /* 搜索框 */
+        .search-box { position: relative; max-width: 480px; margin: 8px auto 28px; padding: 0 20px; }
+        .search-box .search-icon { position: absolute; left: 34px; top: 50%; transform: translateY(-50%); font-size: 15px; color: #999; pointer-events: none; }
+        .search-box input { width: 100%; padding: 12px 16px 12px 42px; border: 1px solid #ddd; border-radius: 24px; font-size: 14px; outline: none; transition: border-color .2s, box-shadow .2s; }
+        .search-box input:focus { border-color: #1a73e8; box-shadow: 0 0 0 3px rgba(26,115,232,0.12); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>☁️ 云技术学习中心</h1>
+    <p>云技术培训知识库 · 历史题库 · 在线考试</p>
+    <div class="nav">
+        <a href="#history" onclick="scrollTo_('history')">📚 历史题库</a>
+        <a href="#knowledge" onclick="scrollTo_('knowledge')">📖 知识文档</a>
+        <a href="#exam" onclick="scrollTo_('exam')">✍️ 在线考试</a>
+        <a href="knowledge.html" target="_blank">📑 知识总览</a>
+    </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜索文档或考试...">
+</div>
+
+<div class="container">
+    <!-- 历史题库 -->
+    <div class="section" id="history">
+        <div class="section-title"><span class="icon">📚</span> 历史题库 & 练习</div>
+        <div class="file-grid" id="history-grid"></div>
+    </div>
+
+    <!-- 知识文档 -->
+    <div class="section" id="knowledge">
+        <div class="section-title"><span class="icon">📖</span> 知识文档（knowledge）</div>
+        <a class="file-card entry-card" href="knowledge.html" target="_blank" style="border-left-color:#1a73e8;">
+            <span class="file-icon">📑</span>
+            <div class="file-info">
+                <div class="file-name">知识总览（全部）</div>
+                <div class="file-meta">19 篇知识文档聚合阅读</div>
+            </div>
+            <span class="badge badge-html">HTML</span>
+        </a>
+        <div class="file-grid" id="knowledge-grid"></div>
+    </div>
+
+    <!-- 在线考试 -->
+    <div class="section" id="exam">
+        <div class="section-title"><span class="icon">✍️</span> 在线考试</div>
+        <div class="file-grid" id="exam-grid"></div>
+    </div>
+</div>
+
+
+<script>
+// 文件数据
+const files = {
+    history: [
+        { name: "云基础题库", file: "history/qingsuyun_exam_微专业-云基础.md", desc: "云基础微专业考试题" },
+        { name: "云数据库题库", file: "history/qingsuyun_exam_微专业-云数据库.md", desc: "云数据库微专业考试题" },
+        { name: "云网络题库", file: "history/qingsuyun_exam_微专业-云网络.md", desc: "云网络微专业考试题" },
+        { name: "云应用题库", file: "history/qingsuyun_exam_微专业-云应用.md", desc: "云应用微专业考试题" },
+        { name: "云安全题库", file: "history/qingsuyun_exam_微专业-云安全.md", desc: "云安全微专业考试题" },
+        { name: "历史练习·云基础", file: "practice1.html", desc: "40题练习（30单选+10多选）", type: "html" },
+        { name: "历史练习·云数据库", file: "practice2.html", desc: "40题练习（30单选+10多选）", type: "html" },
+        { name: "历史练习·云网络", file: "practice3.html", desc: "40题练习（30单选+10多选）", type: "html" },
+        { name: "历史练习·云应用", file: "practice4.html", desc: "40题练习（30单选+10多选）", type: "html" },
+        { name: "历史练习·云安全", file: "practice5.html", desc: "40题练习（30单选+10多选）", type: "html" }
+    ],
+    knowledge: [
+        { name: "操作系统运维基础", file: "knowledge/03操作系统运维基础-V0.5.md", desc: "Linux/Windows基础命令" },
+        { name: "操作系统运维工具", file: "knowledge/04操作系统运维工具-V0.4.md", desc: "常用运维工具介绍" },
+        { name: "云服务器CVM", file: "knowledge/05云服务器-V0.4.md", desc: "云服务器实例与管理" },
+        { name: "云硬盘CBS", file: "knowledge/06云服务器之云硬盘-V0.4.md", desc: "云硬盘类型与性能" },
+        { name: "域名", file: "knowledge/07域名-V0.4.md", desc: "域名注册与管理" },
+        { name: "DNS解析", file: "knowledge/08DNS解析-V0.4.md", desc: "DNS记录与解析流程" },
+        { name: "SSL证书", file: "knowledge/09SSL证书-V0.4.md", desc: "证书类型与HTTPS" },
+        { name: "备案", file: "knowledge/10备案-V0.4.md", desc: "ICP备案流程与要求" },
+        { name: "网络运维基础", file: "knowledge/11网络运维基础-V0.3.md", desc: "TCP/IP与网络协议" },
+        { name: "私有网络VPC", file: "knowledge/12私有网络-V0.3.md", desc: "VPC架构与组件" },
+        { name: "网络连接", file: "knowledge/13私有网络 之 网络连接-V0.3.md", desc: "NAT/对等/VPN/专线" },
+        { name: "云负载均衡CLB", file: "knowledge/14云负载均衡.md", desc: "四层/七层负载均衡" },
+        { name: "云数据库MySQL", file: "knowledge/15 云数据库Mysql-V0.5.md", desc: "MySQL高可用与备份" },
+        { name: "云数据库Redis", file: "knowledge/16 云数据库Redis-V0.5.md", desc: "Redis数据结构与集群" },
+        { name: "对象存储COS", file: "knowledge/17对象存储-V0.3.md", desc: "COS存储类型与管理" },
+        { name: "CDN加速", file: "knowledge/18网站加速CDN-V0.3.md", desc: "CDN原理与配置" },
+        { name: "安全与防护", file: "knowledge/22安全与防护-V0.3.md", desc: "DDoS/WAF/主机安全" },
+        { name: "安全产品", file: "knowledge/23安全产品-V0.3.md", desc: "腾讯云安全产品体系" },
+        { name: "综合考试题库", file: "knowledge/云技术综合考试题库.md", desc: "80题综合考试(第一套)" }
+    ],
+    exam: [
+        { name: "考试一：基础全覆盖", file: "exam.html", desc: "80题 · 各领域均衡", type: "html" },
+        { name: "考试二：综合提升", file: "exam2.html", desc: "80题 · 不同角度出题", type: "html" },
+        { name: "考试三：OS与云服务器", file: "exam3.html", desc: "80题 · 侧重操作系统/CVM/CBS", type: "html" },
+        { name: "考试四：网络与VPC", file: "exam4.html", desc: "80题 · 侧重网络/VPC/CLB", type: "html" },
+        { name: "考试五：数据库与存储", file: "exam5.html", desc: "80题 · 侧重MySQL/Redis/COS/CDN", type: "html" },
+        { name: "考试六：安全与综合", file: "exam6.html", desc: "80题 · 侧重安全/云计算/产品体系", type: "html" },
+        { name: "终极考试：全覆盖", file: "exam_final.html", desc: "160题 · 全知识点 · 满分200分", type: "html" },
+        { name: "考试七：域名/DNS/SSL/备案", file: "exam7.html", desc: "80题 · 侧重域名/DNS/SSL/备案", type: "html" },
+        { name: "考试八：CDN 网站加速", file: "exam8.html", desc: "80题 · 侧重CDN加速原理与配置", type: "html" },
+        { name: "考试九：对象存储 COS", file: "exam9.html", desc: "80题 · 侧重COS存储类型与管理", type: "html" },
+        { name: "考试十：安全与防护", file: "exam10.html", desc: "80题 · 侧重DDoS/WAF/主机安全", type: "html" },
+        { name: "考试十一：安全产品体系", file: "exam11.html", desc: "80题 · 侧重腾讯云安全产品", type: "html" },
+        { name: "考试十二：综合模拟卷一", file: "exam12.html", desc: "80题 · 全新角度综合", type: "html" },
+        { name: "考试十三：综合模拟卷二", file: "exam13.html", desc: "80题 · 全新角度综合", type: "html" },
+        { name: "考试十四：综合模拟卷三", file: "exam14.html", desc: "80题 · 全新角度综合", type: "html" }
+    ]
+};
+
+// 渲染文件卡片
+function buildCard(item) {
+    const isMd = item.file.endsWith('.md');
+    const badge = item.type === 'html' || item.file.endsWith('.html')
+        ? '<span class="badge badge-html">HTML</span>'
+        : '<span class="badge badge-md">Markdown</span>';
+    const icon = isMd ? '📄' : '🖥️';
+    const isHtml = item.type === 'html' || item.file.endsWith('.html');
+    const onclick = isMd
+        ? `onclick="window.open('viewer.html?file=${encodeURIComponent(item.file)}&name=${encodeURIComponent(item.name)}','_blank')"`
+        : `onclick="window.open('${item.file}','_blank')"`;
+    return `<a class="file-card" ${onclick}>
+        <span class="file-icon">${icon}</span>
+        <div class="file-info">
+            <div class="file-name">${item.name}</div>
+            <div class="file-meta">${item.desc}</div>
+        </div>
+        ${badge}
+    </a>`;
+}
+
+function renderGrid(gridId, items) {
+    document.getElementById(gridId).innerHTML = items.map(buildCard).join('');
+}
+
+function applyFilter(kw) {
+    kw = (kw || '').trim().toLowerCase();
+    ['history', 'knowledge', 'exam'].forEach(key => {
+        const grid = document.getElementById(key + '-grid');
+        const section = document.getElementById(key);
+        const matched = kw === '' ? files[key] : files[key].filter(it =>
+            (it.name + ' ' + it.desc).toLowerCase().includes(kw));
+        grid.innerHTML = matched.map(buildCard).join('');
+        section.style.display = matched.length ? '' : 'none';
+    });
+}
+
+
+// 平滑滚动
+function scrollTo_(id) {
+    document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+}
+
+// 初始化
+renderGrid('history-grid', files.history);
+renderGrid('knowledge-grid', files.knowledge);
+renderGrid('exam-grid', files.exam);
+
+function renderStats() {
+    const stats = [
+        { num: files.knowledge.length, label: '知识文档（篇）' },
+        { num: files.exam.length, label: '在线考试（套）' },
+        { num: '1200+', label: '题库总量（题）' }
+    ];
+    document.getElementById('stats').innerHTML = stats.map(s =>
+        `<div class="stat-card"><div class="stat-num">${s.num}</div><div class="stat-label">${s.label}</div></div>`
+    ).join('');
+}
+renderStats();
+
+document.getElementById('searchInput').addEventListener('input', e => applyFilter(e.target.value));
+</script>
+</body>
+</html>

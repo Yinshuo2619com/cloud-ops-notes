@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云技术考试（第七套）— 域名/DNS/SSL/备案</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+
+        /* 顶部栏 */
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+
+        /* 主体布局 */
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+
+        /* 左侧答题卡 */
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+
+        /* 答题后选项样式 */
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .legend .dot.current { border: 2px solid #1a73e8; }
+
+        /* 右侧题目区 */
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+
+        /* 答案显示 */
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+
+        /* 结果面板 */
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+
+        /* 离开确认弹窗 */
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 顶部栏 -->
+<div class="top-bar">
+    <div class="title">云技术考试（第七套）— 域名/DNS/SSL/备案</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+
+<div class="main">
+    <!-- 左侧答题卡 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers">
+            <div class="q-grid" id="qGrid"></div>
+        </div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+
+    <!-- 右侧题目区 -->
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 离开确认弹窗 -->
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// 题库数据
+const examData = [
+{type:"single",q:"域名的本质可以理解为",o:["IP地址的别名", "服务器的操作系统", "网站的源代码", "路由器的型号"],a:0,s:1},
+{type:"single",q:"域名可以由以下哪类字符组成",o:["仅中文汉字", "英文字母、阿拉伯数字、连字符（-）和点（.）", "任意特殊符号", "仅大写字母"],a:1,s:1},
+{type:"single",q:"在 www.qq.com 中，qq.com 属于",o:["一级域名", "二级域名（主域名）", "三级域名", "泛域名"],a:1,s:1},
+{type:"single",q:"在 www.qq.com 中，.com 属于",o:["一级域名（顶级域名）", "二级域名", "三级域名", "子域名"],a:0,s:1},
+{type:"single",q:"www.qq.com 属于第几级域名",o:["一级域名", "二级域名", "三级域名", "四级域名"],a:2,s:1},
+{type:"single",q:"4.www.qq.com 属于第几级域名",o:["二级域名", "三级域名", "四级域名", "五级域名"],a:2,s:1},
+{type:"single",q:"*.qq.com 这种带星号通配符的域名称为",o:["主域名", "泛域名", "中文域名", "顶级域名"],a:1,s:1},
+{type:"single",q:"根据 ICANN 要求，用户当前域名的所有权最长不超过",o:["3年", "5年", "10年", "20年"],a:2,s:1},
+{type:"single",q:"某域名已有3年期限，则最多还可以续费",o:["3年", "5年", "7年", "10年"],a:2,s:1},
+{type:"single",q:"关于域名注册后的退款政策，正确的是",o:["7天内无理由退款", "30天内可申请退款", "一旦注册成功不支持退款", "任何时候都可退款"],a:2,s:1},
+{type:"single",q:"以下哪组后缀的域名暂时不支持网站备案",o:[".com 和 .cn", ".org 和 .name", ".net 和 .com.cn", ".cn 和 .net"],a:1,s:1},
+{type:"single",q:"批量注册域名时，一次性一般最多不能超过",o:["50个", "100个", "200个", "500个"],a:2,s:1},
+{type:"single",q:"白金域名的另一个常见称呼是",o:["溢价域名", "免费域名", "过期域名", "保留域名"],a:0,s:1},
+{type:"single",q:"要查询某域名是否已被注册、注册商信息、注册日期和到期日期，应使用",o:["ping 命令", "WHOIS 查询工具", "traceroute 命令", "telnet 命令"],a:1,s:1},
+{type:"single",q:"域名到期后若超过续费期进入赎回期，将会",o:["自动免费续费", "需要以高额价格才能赎回", "立即被永久删除且不可恢复", "自动转为白金域名"],a:1,s:1},
+{type:"single",q:"DNS 的英文全称是",o:["Domain Name System", "Data Network Service", "Dynamic Name Server", "Domain Network Service"],a:0,s:1},
+{type:"single",q:"全球根名称服务器共有",o:["13个", "13套", "10套", "26套"],a:1,s:1},
+{type:"single",q:"根名称服务器的主要职责是",o:["直接为用户解析所有域名", "对全部顶级名称服务器进行管理", "提供网站托管服务", "分配公网IP地址"],a:1,s:1},
+{type:"single",q:"顶级名称服务器（如 .com 的DNS服务器）主要负责",o:["管理根名称服务器", "管理其下的权威名称服务器，即二级域名解析", "提供本地解析缓存", "设置TTL值"],a:1,s:1},
+{type:"single",q:"权威名称DNS服务器通常由谁提供",o:["网络运营商", "域名注册商", "浏览器厂商", "操作系统厂商"],a:1,s:1},
+{type:"single",q:"本地名称DNS服务器（LocalDNS）一般由谁提供",o:["ICANN", "ISP网络运营商（电信、联通、移动等）", "工业和信息化部", "CA证书颁发机构"],a:1,s:1},
+{type:"single",q:"114.114.114.114 属于",o:["某网站的服务器IP", "公共DNS服务器地址", "根名称服务器地址", "内网网关地址"],a:1,s:1},
+{type:"single",q:"A 记录的记录值只能填写",o:["另一个域名", "IPv4地址", "MAC地址", "端口号"],a:1,s:1},
+{type:"single",q:"CNAME 记录的记录值应填写",o:["IPv4地址", "IPv6地址", "另一个域名", "一段文本描述"],a:2,s:1},
+{type:"single",q:"为主域名 52mzt.com 本身添加解析时，主机记录处应填写",o:["www", "@", "*", "留空不填"],a:1,s:1},
+{type:"single",q:"免费版解析的 TTL 默认值是",o:["60秒", "300秒", "600秒（10分钟）", "3600秒"],a:2,s:1},
+{type:"single",q:"关于 TTL 的说法，正确的是",o:["数值越大修改记录生效越快", "数值越小修改记录各地生效越快", "TTL与生效速度无关", "TTL不可修改"],a:1,s:1},
+{type:"single",q:"浏览器发起域名解析时，最先查询的是",o:["根域名服务器", "浏览器自身缓存", "LocalDNS", "权威名称服务器"],a:1,s:1},
+{type:"single",q:"黑客通过修改 hosts 文件把特定域名解析到其指定IP的行为称为",o:["DDoS攻击", "域名劫持", "SQL注入", "端口扫描"],a:1,s:1},
+{type:"single",q:"修改域名的 DNS 服务器地址后，建议超过多久再进行解析测试",o:["10分钟", "1小时", "24小时", "48小时"],a:3,s:1},
+{type:"single",q:"SSL证书也常被称为",o:["服务器证书", "身份证书", "域名证书", "备案证书"],a:0,s:1},
+{type:"single",q:"只有由什么机构颁发的SSL证书才被浏览器默认信任",o:["工业和信息化部", "全球信任的证书颁发机构（CA）", "域名注册商", "云服务商客服"],a:1,s:1},
+{type:"single",q:"HTTPS 协议默认使用的端口是",o:["80", "22", "443", "8080"],a:2,s:1},
+{type:"single",q:"免费型SSL证书的默认有效期通常是",o:["3个月", "6个月", "1年", "3年"],a:2,s:1},
+{type:"single",q:"关于付费型SSL证书购买3年后的使用，正确的说法是",o:["3年内无需任何操作", "每年都要重新颁发新证书并配置替换旧证书，只是不用再缴费", "每年都要重新缴费", "3年后系统自动续期"],a:1,s:1},
+{type:"single",q:"个人或企业自主签发的SSL证书",o:["与CA证书同等被信任", "不被浏览器默认信任", "完全无法实现加密", "必须报工信部审批"],a:1,s:1},
+{type:"single",q:"全球信任的CA机构证书之所以被信任，主要原因是",o:["用户手动逐一安装", "CA证书默认内置在操作系统、浏览器或网站应用中", "由DNS服务器下发", "由运营商强制推送"],a:1,s:1},
+{type:"single",q:"在 Nginx 中开启 HTTPS 监听的配置写法是",o:["listen 80;", "listen 443 ssl;", "listen 8080;", "listen 22 ssl;"],a:1,s:1},
+{type:"single",q:"Nginx 配置中 ssl_certificate 指定的是",o:["SSL证书的公钥内容", "SSL证书的私钥内容", "网站根目录", "日志文件路径"],a:0,s:1},
+{type:"single",q:"Nginx 配置中 ssl_certificate_key 指定的是",o:["SSL证书的公钥内容", "SSL证书的私钥内容", "加密套件列表", "会话超时时间"],a:1,s:1},
+{type:"single",q:"文档示例中 ssl_protocols 推荐配置的协议版本是",o:["SSLv2 SSLv3", "TLSv1.0 TLSv1.1", "TLSv1.2 TLSv1.3", "仅 TLSv1.0"],a:2,s:1},
+{type:"single",q:"关于SSL证书退款，说法正确的是",o:["任何情况都可申请退款", "已由CA机构成功颁发的证书无法申请退款", "颁发后30天内可退款", "付费证书可随时退款"],a:1,s:1},
+{type:"single",q:"申请免费型SSL证书时，一般只需要填写",o:["服务器IP和root密码", "绑定域名、验证方式和联系邮箱", "营业执照和法人身份证", "备案号和接入商信息"],a:1,s:1},
+{type:"single",q:"常用的SSL证书在线检测工具平台是",o:["whois.chinaz.com", "myssl.com", "beian.miit.gov.cn", "dnspod.cn"],a:1,s:1},
+{type:"single",q:"SSL证书的核心作用是",o:["提升网站访问速度", "在客户端与服务端之间建立加密通道，防止数据被泄露或篡改", "扩大服务器出口带宽", "替代网站备案手续"],a:1,s:1},
+{type:"single",q:"网站备案的主要法规依据是",o:["国务院令第292号《互联网信息服务管理办法》", "《中华人民共和国合同法》", "《中华人民共和国商标法》", "《中华人民共和国广告法》"],a:0,s:1},
+{type:"single",q:"国家对非经营性互联网信息服务实行",o:["许可制度", "备案制度", "审批制度", "完全自由不监管"],a:1,s:1},
+{type:"single",q:"国家对经营性互联网信息服务实行",o:["备案制度", "许可制度", "免审制度", "随机抽查制度"],a:1,s:1},
+{type:"single",q:"根据规定，管局审核备案的时长不超过",o:["3个工作日", "10个工作日", "20个工作日", "30个工作日"],a:2,s:1},
+{type:"single",q:"ICP备案号由谁下发",o:["域名注册商", "云服务商", "通信管理局", "公安机关"],a:2,s:1},
+{type:"single",q:"未备案的域名直接解析到中国大陆境内的服务器，会出现",o:["访问速度变慢", "域名被阻断导致无法访问", "系统自动完成备案", "仅弹出提示但可正常访问"],a:1,s:1},
+{type:"single",q:"用户应该选择在哪家服务商办理备案",o:["价格最便宜的服务商", "可备案域名指向哪家在国内的服务器，就在对应服务商备案", "注册该域名的服务商", "任意一家均可"],a:1,s:1},
+{type:"single",q:"关于备案授权码，正确的说法是",o:["个人和企业账号都可以生成", "仅企业账号可生成，个人账号不支持", "仅个人账号可以生成", "由管局统一发放"],a:1,s:1},
+{type:"single",q:"用于备案的云服务器，常见要求是",o:["按量计费即可", "预付费3个月及以上，且备案期间剩余有效期需大于等于1个月，具备公网IP和带宽", "无需公网IP", "可选择中国香港地域"],a:1,s:1},
+{type:"single",q:"提交备案后收到工信部下发的短信验证码，需要在多长时间内完成核验",o:["2小时", "24小时", "3天", "7天"],a:1,s:1},
+{type:"single",q:"公安备案需要在网站开通后多少日内完成",o:["7日", "15日", "30日", "60日"],a:2,s:1},
+{type:"single",q:"关于公安备案，正确的说法是",o:["由云服务商代为办理", "云服务商暂不支持代办，需要用户自行完成", "与ICP备案同时自动完成", "网站无需办理公安备案"],a:1,s:1},
+{type:"single",q:"查询域名是否已完成备案，可访问的官方网站是",o:["https://whois.chinaz.com/", "https://beian.miit.gov.cn/", "https://myssl.com/", "https://www.icann.org/"],a:1,s:1},
+{type:"single",q:"备案流程的第一步是",o:["填写备案资料", "验证备案域名/APP名称", "短信核验", "管局审核"],a:1,s:1},
+{type:"single",q:"备案信息发生变化却未及时更新，被管局专项核查后仍未按时整改，可能导致",o:["仅被罚款", "备案被取消接入（注销备案），网站无法继续开展业务", "系统自动变更备案信息", "域名被注册局回收"],a:1,s:1},
+{type:"multi",q:"关于域名的描述，正确的有",o:["域名是IP地址的别名，便于记忆", "域名具有唯一性，必须先注册才能使用", "域名注册成功后可以随时申请退款", "域名由英文字母、阿拉伯数字、连字符和点组成"],a:[0, 1, 3],s:2},
+{type:"multi",q:"关于域名层级与分类，说法正确的有",o:[".com 是一级域名（顶级域名）", "qq.com 是二级域名，也叫主域名", "www.qq.com 是三级域名", "*.qq.com 是泛域名"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"通过 WHOIS 查询可以了解到域名的哪些信息",o:["域名是否已被注册", "域名注册商信息", "域名状态、注册日期与到期日期", "域名对应网站的源代码"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于域名注册的重要提醒，正确的有",o:["含 av、china 等敏感词的域名可能被限制注册或存在被注册局删除的风险", ".org、.name 域名暂时不支持网站备案", "批量注册一次性一般不能超过200个，且部分后缀不支持批量注册", "所有域名后缀都支持批量注册"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于域名计费与年限，说法正确的有",o:["新购一次最多可以购买10年", "续费年限 = 10年 - 域名已有的年限", "超过续费期进入赎回期后需高额费用才能赎回", "白金域名也称为溢价域名，价格会随市场波动"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"DNS服务器按层级和作用可分为",o:["根名称DNS服务器", "顶级名称DNS服务器", "权威名称DNS服务器", "本地名称DNS服务器（LocalDNS）"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于根名称服务器，说法正确的有",o:["全球共有13套", "其中10台在美国，2台在欧洲，1台在日本", "直接保存全部互联网域名记录并为用户解析", "负责对所有顶级名称服务器进行管理"],a:[0, 1, 3],s:2},
+{type:"multi",q:"以下属于常见公共DNS地址的有",o:["114.114.114.114", "119.29.29.29", "223.5.5.5", "8.8.8.8"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于 A 记录与 CNAME 记录的区别，正确的有",o:["A记录的记录值只能填写IPv4地址", "CNAME记录的记录值只能填写域名", "两者免费版TTL默认均为600秒", "CNAME记录的记录值也可以直接填写IP地址"],a:[0, 1, 2],s:2},
+{type:"multi",q:"验证域名解析是否配置成功，可以使用的命令工具有",o:["ping", "nslookup", "dig", "fdisk"],a:[0, 1, 2],s:2},
+{type:"multi",q:"SSL证书的作用包括",o:["对客户端与服务端之间交换的信息进行加密", "确保传输数据不被泄露或篡改", "激活浏览器挂锁标识并启用 https 协议", "显著提升服务器CPU运算性能"],a:[0, 1, 2],s:2},
+{type:"multi",q:"Nginx 配置SSL证书时常用的指令有",o:["listen 443 ssl", "ssl_certificate", "ssl_certificate_key", "ssl_protocols"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于SSL证书的年限，说法正确的有",o:["免费型SSL证书默认只有1年期限", "免费型证书到期后需要重新申请，且同时持有数量有上限", "付费型SSL证书最长可以购买3年", "付费型证书购买3年后，3年内无需更换证书"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于SSL证书的信任机制，说法正确的有",o:["任何个人或企业都可以自主颁发SSL证书", "自签发的SSL证书不被浏览器默认信任", "全球信任的CA根证书默认内置在操作系统或浏览器中", "自签发证书同样会显示浏览器安全锁且无任何提示"],a:[0, 1, 2],s:2},
+{type:"multi",q:"申请免费型SSL证书时通常需要填写的信息包括",o:["绑定的域名", "域名验证方式", "联系邮箱", "服务器的 root 登录密码"],a:[0, 1, 2],s:2},
+{type:"multi",q:"备案相关的类型主要包括",o:["网站备案（ICP备案）", "公安备案", "经营性备案（可选）", "工商营业执照备案"],a:[0, 1, 2],s:2},
+{type:"multi",q:"网站备案的主要流程包括",o:["验证备案域名/APP名称", "填写备案资料并提交云审核", "工信部短信核验", "管局审核并下发备案号"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"办理备案通常需要准备的材料包括",o:["满足备案要求的域名（后缀符合、已实名认证、未到期）", "符合要求的云服务器或备案授权码等云资源", "主体证件材料及联系方式", "网站的完整源代码包"],a:[0, 1, 2],s:2},
+{type:"multi",q:"关于备案授权码，说法正确的有",o:["用于在云备案系统填写备案信息时关联云服务器", "由云服务器或轻量应用服务器生成，实际指向该服务器的IP地址", "企业账号满足条件时可以生成", "个人账号同样可以生成备案授权码"],a:[0, 1, 2],s:2},
+{type:"multi",q:"备案信息发生变化而未及时更新，经专项核查后仍未整改，可能导致的后果有",o:["备案被取消接入，即注销备案", "网站无法继续开展业务", "域名被阻断导致无法访问", "云服务器自动升级扩容"],a:[0, 1, 2],s:2},
+];
+;
+
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+
+// 计时器
+function startTimer() {
+    setInterval(() => {
+        if (answered) return;
+        timerSec++;
+        const m = String(Math.floor(timerSec / 60)).padStart(2, '0');
+        const s = String(timerSec % 60).padStart(2, '0');
+        document.getElementById('timer').textContent = `⏱ ${m}:${s}`;
+    }, 1000);
+}
+
+// 初始化答题卡
+function initGrid() {
+    let html = '';
+    for (let i = 0; i < TOTAL; i++) {
+        html += `<button id="qb${i}" onclick="goTo(${i})">${i + 1}</button>`;
+    }
+    document.getElementById('qGrid').innerHTML = html;
+    document.getElementById('totalCount').textContent = TOTAL;
+}
+
+// 渲染当前题目
+function renderQ() {
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    const typeText = isSingle ? '单选题' : '多选题';
+    document.getElementById('qHeader').innerHTML = `<span class="q-type">${typeText}</span><span class="q-score">(${item.s} 分)</span>`;
+    document.getElementById('qText').textContent = item.q;
+
+    const ca = isSingle ? [item.a] : item.a;
+    const ua = userAnswers[currentQ] || [];
+    const isCorrect = answered && ua.length === ca.length && ua.every(v => ca.includes(v));
+
+    let optHtml = '';
+    item.o.forEach((opt, j) => {
+        const selected = ua.includes(j);
+        const isAnswer = ca.includes(j);
+        let cls = selected ? ' selected' : '';
+        if (answered) {
+            if (isAnswer && selected) cls = ' show-correct';
+            else if (!isAnswer && selected) cls = ' show-wrong';
+            else if (isAnswer && !selected) cls = ' show-missed';
+            else cls = '';
+        }
+        optHtml += `<div class="option-item${cls}" ${answered ? '' : `onclick="selectOption(${j})"`}>
+            <div class="opt-label">${LABELS[j]}</div>
+            <div class="opt-text">${opt}</div>
+        </div>`;
+    });
+    document.getElementById('qOptions').innerHTML = optHtml;
+
+    // 答题后显示对错
+    const reveal = document.getElementById('answerReveal');
+    if (answered) {
+        reveal.style.display = 'block';
+        const ansText = ca.map(a => LABELS[a]).join(',');
+        if (isCorrect) {
+            reveal.className = 'answer-reveal correct';
+            reveal.innerHTML = `✅ 回答正确 | 正确答案：${ansText}`;
+        } else {
+            reveal.className = 'answer-reveal wrong';
+            const yourText = ua.length > 0 ? ua.map(a => LABELS[a]).join(',') : '未作答';
+            reveal.innerHTML = `❌ 回答错误 | 你的答案：${yourText} | 正确答案：${ansText}`;
+        }
+    } else {
+        reveal.style.display = 'none';
+    }
+
+    // 更新答题卡高亮
+    document.querySelectorAll('.q-grid button').forEach((btn, i) => {
+        btn.classList.remove('active');
+        if (i === currentQ) btn.classList.add('active');
+    });
+}
+
+// 选择选项
+function selectOption(idx) {
+    if (answered) return;
+    const item = examData[currentQ];
+    const isSingle = item.type === 'single';
+    if (isSingle) {
+        userAnswers[currentQ] = [idx];
+    } else {
+        if (!userAnswers[currentQ]) userAnswers[currentQ] = [];
+        const pos = userAnswers[currentQ].indexOf(idx);
+        if (pos > -1) userAnswers[currentQ].splice(pos, 1);
+        else userAnswers[currentQ].push(idx);
+    }
+    renderQ();
+    updateProgress();
+}
+
+// 更新进度
+function updateProgress() {
+    let done = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        const btn = document.getElementById(`qb${i}`);
+        if (userAnswers[i] && userAnswers[i].length > 0) {
+            done++;
+            btn.classList.add('done');
+        } else {
+            btn.classList.remove('done');
+        }
+    }
+    document.getElementById('doneCount').textContent = done;
+    document.getElementById('progressFill').style.width = (done / TOTAL * 100) + '%';
+}
+
+// 跳转题目
+function goTo(idx) { currentQ = idx; renderQ(); }
+function prevQ() { if (currentQ > 0) { currentQ--; renderQ(); } }
+function nextQ() { if (currentQ < TOTAL - 1) { currentQ++; renderQ(); } }
+
+// 交卷
+function submitExam() {
+    if (answered) return;
+    let unanswered = 0;
+    for (let i = 0; i < TOTAL; i++) {
+        if (!userAnswers[i] || userAnswers[i].length === 0) unanswered++;
+    }
+    if (unanswered > 0 && !confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+
+    let score = 0, correct = 0, wrong = 0;
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        if (isCorrect) { score += item.s; correct++; }
+        else { wrong++; }
+    });
+
+    // 显示每题对错（答题卡颜色）
+    examData.forEach((item, i) => {
+        const ua = userAnswers[i] || [];
+        const ca = item.type === 'single' ? [item.a] : item.a;
+        const isCorrect = ua.length === ca.length && ua.every(v => ca.includes(v));
+        const btn = document.getElementById(`qb${i}`);
+        btn.classList.remove('done');
+        btn.classList.add(isCorrect ? 'correct' : 'wrong');
+    });
+
+    // 隐藏结果面板，显示题目供查看
+    document.getElementById('resultPanel').style.display = 'none';
+    document.getElementById('questionCard').style.display = 'block';
+    const maxScore = examData.reduce((sum, t) => sum + t.s, 0);
+
+    // 更新顶部栏显示成绩
+    document.querySelector('.top-bar .title').innerHTML = `云技术考试（第七套）— 域名/DNS/SSL/备案 <span style="font-size:13px;font-weight:400;color:${score >= maxScore * 0.6 ? '#4caf50' : '#f44336'}">| 得分：${score}/${maxScore}（答对${correct}题，答错${wrong}题）</span>`;
+
+    // 更新答题卡图例
+    document.querySelector('.sidebar-footer').innerHTML = `
+        <div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div>
+        <div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>
+    `;
+
+    answered = true;
+    currentQ = 0;
+    renderQ();
+}
+
+// 键盘导航
+document.addEventListener('keydown', e => {
+    if (answered) return;
+    if (e.key === 'ArrowLeft') prevQ();
+    if (e.key === 'ArrowRight') nextQ();
+});
+
+// 初始化
+initGrid();
+renderQ();
+startTimer();
+
+// ===== 离开/刷新拦截 =====
+let pendingLeaveUrl = null;
+
+// 浏览器原生拦截（刷新、关闭标签页）
+function beforeUnloadHandler(e) {
+    if (answered) return;
+    e.preventDefault();
+    e.returnValue = '';
+}
+window.addEventListener('beforeunload', beforeUnloadHandler);
+
+// 拦截页面内所有链接跳转
+document.addEventListener('click', function(e) {
+    if (answered) return;
+    const link = e.target.closest('a[href]');
+    if (link && !link.href.startsWith('javascript:')) {
+        e.preventDefault();
+        pendingLeaveUrl = link.href;
+        document.getElementById('leaveModal').classList.add('show');
+    }
+});
+
+// 拦截刷新按钮
+function interceptReload() {
+    if (answered) { location.reload(); return; }
+    pendingLeaveUrl = null;
+    document.getElementById('leaveModal').classList.add('show');
+}
+
+function closeLeaveModal() {
+    document.getElementById('leaveModal').classList.remove('show');
+    pendingLeaveUrl = null;
+}
+
+function confirmLeave() {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+    if (pendingLeaveUrl) {
+        location.href = pendingLeaveUrl;
+    } else {
+        location.reload();
+    }
+}
+</script>
+</body>
+</html>

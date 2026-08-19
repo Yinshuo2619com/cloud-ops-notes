@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史练习·云应用</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="title">历史练习·云应用</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers"><div class="q-grid" id="qGrid"></div></div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+<script>
+const examData = [
+{type:"single",q:"腾讯云CDN配置生效时间需要多久？",o:["可通过腾讯云CDN平台自定义设置","10-15分钟","5-15分钟","5分钟"],a:2,s:2},
+{type:"single",q:"如何能够判断访问的域名里面的网站内容是否涉及盗链呢？",o:["可通过http headers头部的Request Headers的Referer字段判断","可通过http headers头部的Response Headers的Referer字段判断","可通过http headers头部的General的Referer字段判断","可通过http headers头部的Request Headers的Host字段判断"],a:0,s:2},
+{type:"single",q:"关于腾讯云CDN的源站描述错误的是",o:["CDN源站可以写腾讯云服务器的内网IP地址","CDN源站可以写腾讯云服务器的公网IP地址","CDN源站可以写阿里云服务器的公网IP地址","CDN源站可以写腾讯云负载均衡的公网IP地址"],a:0,s:2},
+{type:"single",q:"腾讯云CDN加速域名b.com设置开启防盗链白名单，白名单内容为c.com，c.com调用b.com的网站内容，调用访问结果如何",o:["可以正常访问","访问报错404","访问报错514","访问报错403"],a:0,s:2},
+{type:"single",q:"腾讯云CDN加速域名b.com设置开启防盗链白名单，白名单内容为c.com，a.com调用b.com的网站内容，调用访问结果如何",o:["可以正常访问","访问报错404","访问报错514","访问报错403"],a:3,s:2},
+{type:"single",q:"腾讯云CDN加速域名b.com设置开启防盗链黑名单，黑名单内容为*.c.com，c.com调用b.com的网站内容，调用访问结果如何",o:["可以正常访问","访问报错404","访问报错514","访问报错403"],a:0,s:2},
+{type:"single",q:"腾讯云CDN加速域名b.com设置开启防盗链黑名单，黑名单内容为*.c.com，www.c.com调用b.com的网站内容，调用访问结果如何",o:["可以正常访问","访问报错404","访问报错514","访问报错403"],a:3,s:2},
+{type:"single",q:"腾讯云CDN分片回源的作用是什么？",o:["能够有效提高大文件分发效率，提升响应速度","降低回源带宽","减轻源站压力","减少流量费用"],a:0,s:2},
+{type:"single",q:"http绑定某个节点访问全部耗时的命令是",o:["curl -Lvo /dev/null \"URL\" -x IP:80 -w \"%{time_total}\\n\"","curl -Lvo /dev/null \"URL\" -x IP:80","curl -Lvo /dev/null \"URL\" -x IP:80 -w \"%{time_speed}\\n\"","curl -Lvo /dev/null \"URL\" -x IP:80 -w \"%{time_download}\\n\""],a:0,s:2},
+{type:"single",q:"您在源站更新了一项特别紧急的数据，您希望腾讯云各个CDN节点可以立即显示给用户，您应该如何快速达到此目标?",o:["在腾讯云中，操作缓存预热","在腾讯云中，操作缓存刷新","更换一个新的域名可以立即让所有CDN节点获得最新数据","更换一个新的IP可以立即让所有CDN节点获得最新数据"],a:1,s:2},
+{type:"single",q:"接入腾讯云国内加速域名必须满足哪个条件",o:["备案","源站80端口打开","源站是cvm","源站是cos"],a:0,s:2},
+{type:"single",q:"腾讯云CDN加速域名的源站可以写几个域名",o:["1","2","3","4"],a:0,s:2},
+{type:"single",q:"如何判断IP是腾讯云CDN节点ip",o:["腾讯云CDN控制台IP归属查询","ping","nslookup","ip138查询"],a:0,s:2},
+{type:"single",q:"以下那种类型的文件不适合用腾讯云CDN加速",o:["php","html","图片","视频"],a:0,s:2},
+{type:"single",q:"腾讯云CDN域名访问出现514错误，一般是什么原因",o:["QPS设置错误","防盗链设置错误","IP黑白名单设置错误","跨域设置错误"],a:0,s:2},
+{type:"single",q:"腾讯云CDN边缘节点主要功能是什么？",o:["缓存源站数据和响应客户端用户请求","缓存源站数据","响应客户端用户请求","缓存源站数据和响应中间源节点请求"],a:0,s:2},
+{type:"single",q:"腾讯云CDN中间源节点主要功能是什么？",o:["缓存源站数据和响应客户端用户请求","缓存源站数据","响应客户端用户请求","缓存源站数据和响应边缘节点请求"],a:3,s:2},
+{type:"single",q:"CURL工具使用https协议测试访问源站或者访问某CDN节点的命令是？",o:["curl -Lvo /dev/null https://a.com/1.png --resolve a.com:443:1.1.1.1","curl -Lvo /dev/null https://a.com/1.png -x 1.1.1.1:443","curl -Lvo /dev/null https://a.com/1.png","curl -Lvo /dev/null https://a.com/1.png --resolve 1.1.1.1:443"],a:0,s:2},
+{type:"single",q:"腾讯云GSLB的主要功能是什么？",o:["为客户端用户请求分配最佳的CDN中间源节点","为服务端响应分配最佳的CDN边缘节点","为客户端用户请求分配最佳的CDN源站","为客户端用户请求分配最佳的CDN边缘节点"],a:3,s:2},
+{type:"single",q:"腾讯云CDN中，1.jpg的源站头部设置cache-control：max-age=600，CDN控制台设置jpg文件后缀缓存20天，1.jpg文件在CDN节点缓存多长时间",o:["不缓存","20天","遵循源站","10分钟"],a:1,s:2},
+{type:"single",q:"腾讯云CDN中，1.jpg文件的源站头部cache-control：max-age=600，CDN控制台设置jpg类型文件缓存30天，jpg文件实际在客户端浏览器缓存的时间是多长？",o:["10分钟","60分钟","600分钟","600小时"],a:0,s:2},
+{type:"single",q:"源站某资源携带头部cache-control:no-store，客户希望在腾讯云CDN节点缓存此资源，有什么办法",o:["无法实现","可以针对此文件单独设置缓存时间","针对此文件类型设置缓存时间并开启强制缓存","以上都不对"],a:2,s:2},
+{type:"single",q:"腾讯云CDN回源到源站走的什么网络",o:["内网","公网","专线","隧道"],a:1,s:2},
+{type:"single",q:"静态网站是指",o:["由HTML代码格式页面组成的网站","由PHP代码格式页面组成的网站","页面不动的网站都是静态网站","由asp代码格式页面组成的网站"],a:0,s:2},
+{type:"single",q:"动态网站是指",o:["可根据不同情况动态变更的网站，一般情况下动态网站通过数据库进行架构，由动态语言开发","由HTML代码格式页面组成的网站","页面可以变化的网站都是动态网站","视频网站就是一种动态网站"],a:0,s:2},
+{type:"single",q:"腾讯云COS的存储桶最大支持存储多少个对象",o:["10000","20000","30000","不限"],a:3,s:2},
+{type:"single",q:"以下那个是腾讯云COS的默认域名",o:["cos-1257166515.cos-website.ap-beijing.myqcloud.com","cos-1257166515.cos.ap-beijing.myqcloud.com","cos-1257166515.file.myqcloud.com","cos-1257166515.cos.accelerate.myqcloud.com"],a:1,s:2},
+{type:"single",q:"腾讯云COS的中国大陆公有云地域单账号默认带宽为多少",o:["5Gbit/s","10Gbit/s","15Gbit/s","20Gbit/s"],a:2,s:2},
+{type:"single",q:"腾讯云COS的COSCMD工具支持使用下面哪种认证方式访问对象存储",o:["云API密钥登录","腾讯云账号登录","绑定邮箱登录","绑定微信登录"],a:0,s:2},
+{type:"single",q:"腾讯云对象存储的存储桶权限管理中，没如下那种权限？",o:["私有读写","公有写私有读","公有读私有写","公有读写"],a:1,s:2},
+{type:"multi",q:"如下关于腾讯云CDN分片回源的说法正确的是",o:["分片回源其实就是Range请求回源","分片回源状态码一般显示206","分片回源就是大文件切成很多小片，然后一片片进行传输","分片回源可以提升源站效应速度"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云CDN回源流量一般哪几种情况下产生的",o:["CDN 节点上没有资源，需要到源站拉取的时候","手动刷新源站时同步到节点的时候","源站刷新时间到了自动刷新的时候","直接访问了源站"],a:[0, 1, 2],s:2},
+{type:"multi",q:"腾讯云CDN中间源作用是什么",o:["中间源增加缓存能力，减少回源请求","中间源收敛边缘节点的回源请求，降低源站的回源压力","中间源也可以缓存源站数据，提升访问速度","中间源也可以做为边缘节点响应用户请求"],a:[0, 1, 2],s:2},
+{type:"multi",q:"以下哪些可以配置为腾讯云CDN源站？",o:["COS域名","公网IP","域名","内网IP"],a:[0, 1, 2],s:2},
+{type:"multi",q:"腾讯云CDN有效地解决了目前互联网业务中网络层面的以下问题",o:["用户与业务服务器地域间物理距离较远，需要进行多次网络转发，传输延时较高且不稳定","用户使用运营商与业务服务器所在运营商不同，请求需要运营商之间进行互联转发","业务服务器网络带宽、处理能力有限，当接收到海量用户请求时，会导致响应速度降低、可用性降低","以上都对"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云CDN支持哪些端口访问",o:["80","443","8080","8443"],a:[0, 1, 2],s:2},
+{type:"multi",q:"腾讯云CDN支持哪些端口回源",o:["80","8080","65533","443"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云COS的存储桶中的文件访问报http 403 错误，有可能是哪些原因造成的",o:["存储桶文件设置了私有读写","存储桶设置了防盗链","没有该文件","签名不匹配"],a:[0, 1, 3],s:2},
+{type:"multi",q:"腾讯云COS的COSBrowser工具支持使用下面哪些平台方式进行使用？",o:["IOS","Android","Linux","Windows"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"通过那些方法可以管理腾讯云COS存储桶",o:["控制台","API","SDK","COSBrowser工具"],a:[0, 1, 2, 3],s:2}
+];
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+function startTimer(){setInterval(()=>{if(answered)return;timerSec++;const m=String(Math.floor(timerSec/60)).padStart(2,'0');const s=String(timerSec%60).padStart(2,'0');document.getElementById('timer').textContent=`⏱ ${m}:${s}`},1000)}
+function initGrid(){let h='';for(let i=0;i<TOTAL;i++)h+=`<button id="qb${i}" onclick="goTo(${i})">${i+1}</button>`;document.getElementById('qGrid').innerHTML=h;document.getElementById('totalCount').textContent=TOTAL}
+function renderQ(){const item=examData[currentQ];const isS=item.type==='single';const tt=isS?'单选题':'多选题';document.getElementById('qHeader').innerHTML=`<span class="q-type">${tt}</span><span class="q-score">(${item.s}分)</span>`;document.getElementById('qText').textContent=item.q;const ca=isS?[item.a]:item.a;const ua=userAnswers[currentQ]||[];const isC=answered&&ua.length===ca.length&&ua.every(v=>ca.includes(v));let oh='';item.o.forEach((opt,j)=>{const sel=ua.includes(j);const isA=ca.includes(j);let cls=sel?' selected':'';if(answered){if(isA&&sel)cls=' show-correct';else if(!isA&&sel)cls=' show-wrong';else if(isA&&!sel)cls=' show-missed';else cls=''}oh+=`<div class="option-item${cls}" ${answered?'':`onclick="selectOption(${j})"`}><div class="opt-label">${LABELS[j]}</div><div class="opt-text">${opt}</div></div>`});document.getElementById('qOptions').innerHTML=oh;const rv=document.getElementById('answerReveal');if(answered){rv.style.display='block';const at=ca.map(a=>LABELS[a]).join(',');if(isC){rv.className='answer-reveal correct';rv.innerHTML=`✅ 回答正确 | 正确答案：${at}`}else{rv.className='answer-reveal wrong';const yt=ua.length>0?ua.map(a=>LABELS[a]).join(','):'未作答';rv.innerHTML=`❌ 回答错误 | 你的答案：${yt} | 正确答案：${at}`}}else{rv.style.display='none'}document.querySelectorAll('.q-grid button').forEach((b,i)=>{b.classList.remove('active');if(i===currentQ)b.classList.add('active')})}
+function selectOption(idx){if(answered)return;const item=examData[currentQ];if(item.type==='single'){userAnswers[currentQ]=[idx]}else{if(!userAnswers[currentQ])userAnswers[currentQ]=[];const p=userAnswers[currentQ].indexOf(idx);if(p>-1)userAnswers[currentQ].splice(p,1);else userAnswers[currentQ].push(idx)}renderQ();updateProgress()}
+function updateProgress(){let done=0;for(let i=0;i<TOTAL;i++){const b=document.getElementById(`qb${i}`);if(userAnswers[i]&&userAnswers[i].length>0){done++;b.classList.add('done')}else{b.classList.remove('done')}}document.getElementById('doneCount').textContent=done;document.getElementById('progressFill').style.width=(done/TOTAL*100)+'%'}
+function goTo(idx){currentQ=idx;renderQ()}
+function prevQ(){if(currentQ>0){currentQ--;renderQ()}}
+function nextQ(){if(currentQ<TOTAL-1){currentQ++;renderQ()}}
+function submitExam(){if(answered)return;let ua=0;for(let i=0;i<TOTAL;i++){if(!userAnswers[i]||userAnswers[i].length===0)ua++}if(ua>0&&!confirm(`还有 ${ua} 题未作答，确定交卷吗？`))return;let score=0,correct=0,wrong=0;examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));if(ok){score+=item.s;correct++}else{wrong++}});examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));const b=document.getElementById(`qb${i}`);b.classList.remove('done');b.classList.add(ok?'correct':'wrong')});document.getElementById('resultPanel').style.display='none';document.getElementById('questionCard').style.display='block';const mx=examData.reduce((s,t)=>s+t.s,0);document.querySelector('.top-bar .title').innerHTML=`历史练习·云应用 <span style="font-size:13px;font-weight:400;color:${score>=mx*0.6?'#4caf50':'#f44336'}">| 得分：${score}/${mx}（答对${correct}题，答错${wrong}题）</span>`;document.querySelector('.sidebar-footer').innerHTML=`<div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div><div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>`;answered=true;currentQ=0;renderQ()}
+document.addEventListener('keydown',e=>{if(answered)return;if(e.key==='ArrowLeft')prevQ();if(e.key==='ArrowRight')nextQ()});
+initGrid();renderQ();startTimer();
+let pendingLeaveUrl=null;
+function beforeUnloadHandler(e){if(answered)return;e.preventDefault();e.returnValue=''}
+window.addEventListener('beforeunload',beforeUnloadHandler);
+document.addEventListener('click',function(e){if(answered)return;const link=e.target.closest('a[href]');if(link&&!link.href.startsWith('javascript:')){e.preventDefault();pendingLeaveUrl=link.href;document.getElementById('leaveModal').classList.add('show')}});
+function interceptReload(){if(answered){location.reload();return}pendingLeaveUrl=null;document.getElementById('leaveModal').classList.add('show')}
+function closeLeaveModal(){document.getElementById('leaveModal').classList.remove('show');pendingLeaveUrl=null}
+function confirmLeave(){window.removeEventListener('beforeunload',beforeUnloadHandler);if(pendingLeaveUrl){location.href=pendingLeaveUrl}else{location.reload()}}
+</script>
+</body>
+</html>

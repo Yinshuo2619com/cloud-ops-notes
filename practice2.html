@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史练习·云数据库</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="title">历史练习·云数据库</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers"><div class="q-grid" id="qGrid"></div></div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+<script>
+const examData = [
+{type:"single",q:"MySQL数据库的默认端口号是多少",o:["3306","1433","5423","1521"],a:0,s:2},
+{type:"single",q:"在MySQL数据库中，以下哪个命令可以创建一个新的数据库",o:["CREATE VIEW","CREATE INDEX","CREATE TABLE","CREATE DATABASE"],a:3,s:2},
+{type:"single",q:"在MySQL数据库中，以下哪个命令可以删除一个数据库",o:["DROP DATABASE","DELETE DATABASE","DELETE TABLE","DROP TABLE"],a:0,s:2},
+{type:"single",q:"在MySQL中，以下哪个命令可以向表中插入一条新的记录",o:["SELECT","UPDATE","INSERT INTO","DELETE"],a:2,s:2},
+{type:"single",q:"在MySQL中，以下哪个命令可以更新表中的记录",o:["DELETE","UPDATE","SELECT","INSERT INTO"],a:1,s:2},
+{type:"single",q:"在MySQL中，以下哪个命令可以查询表中的记录",o:["UPDATE","DELETE","INSERT INTO","SELECT"],a:3,s:2},
+{type:"single",q:"在MySQL中以下哪个命令可以创建一个新的表",o:["CREATE VIEW","CREATE DATABASE","CREATE TABLE","CREATE INDEX"],a:2,s:2},
+{type:"single",q:"在MySQL中，用于创建新用户的命令是",o:["ADD USER","MAKE USER","CREATE USER","INSERT USER"],a:2,s:2},
+{type:"single",q:"在MySQL中，用于授予用户权限的命令是",o:["PERMIT","ALLOW","GRANT","AUTHORIZE"],a:2,s:2},
+{type:"single",q:"在MySQL中显示所有数据库的命令是",o:["LIST DATABASES","SHOW DATABASES","SHOW DATABASE","LIST DATABASE"],a:1,s:2},
+{type:"single",q:"查看student表结构的SQL语句是",o:["describe student","show student","show create student","show create table student"],a:0,s:2},
+{type:"single",q:"为student表增加一个年龄字段的正确语法是",o:["add sAge to student","change table student add sAge","alter table student add sAge","alter table student add sAge int"],a:3,s:2},
+{type:"single",q:"恢复数据库下列命令正确的是",o:["mysql -u root -p < /root/backup.sql","mysql -u root -p > /root/backup.sql","mysqldump -u root -p > /root/backup.sql","mysqldump -u root -p < /root/backup.sql"],a:0,s:2},
+{type:"single",q:"远程连接MySQL数据库使用下列格式正确的是",o:["mysql -u -proot","mysql -h 远程主机名 -u root -p","mysql -u root -p","mysql root -u -p"],a:1,s:2},
+{type:"single",q:"在数据库Mysql中存储的是",o:["数据模型","信息","数据以及数据之间的关系","数据"],a:2,s:2},
+{type:"single",q:"在MySQL配置文件中，用于设置监听地址的配置项是",o:["server_address","bind_address","host_address","listen_address"],a:1,s:2},
+{type:"single",q:"在MySQL配置文件中，用于设置数据目录的配置项是",o:["data_dir","database_dir","storage_dir","db_dir"],a:0,s:2},
+{type:"single",q:"在MySQL配置文件中，用于设置最大连接数的配置项是",o:["max_connections","connections_limit","max_clients","clients_limit"],a:0,s:2},
+{type:"single",q:"Redis是一种什么类型的数据库",o:["非关系型数据库","文件型数据库","关系型数据库","对象型数据库"],a:0,s:2},
+{type:"single",q:"Redis支持哪种数据结构",o:["仅支持键值对","JSON文档","字符串、哈希、列表、集合、有序集合","二进制大对象（BLOB）"],a:2,s:2},
+{type:"single",q:"Redis的默认端口号是多少",o:["6360","6379","6378","6380"],a:1,s:2},
+{type:"single",q:"什么是 Redis 数据持久化",o:["将数据保存到硬盘上以防止数据丢失","将数据存储在内存中以提高读取速度","一种数据压缩算法","将数据加密以确保安全性"],a:0,s:2},
+{type:"single",q:"在Redis启动后，如何通过命令行客户端连接到Redis服务器",o:["redis-cli connect <ip> <port>","redis-client <ip> <port>","redis-connect <ip> <port>","redis-cli -h <ip> -p <port>"],a:3,s:2},
+{type:"single",q:"在Redis中，用于设置键值对的命令是",o:["POST","PUT","SET","GET"],a:2,s:2},
+{type:"single",q:"Redis中的\"GET\"命令用于做什么",o:["设置键的值","修改键的值","获取键的值","删除键"],a:2,s:2},
+{type:"single",q:"Redis中的\"AUTH\"命令用于做什么",o:["用户注销","用户注册","用户认证","设置用户权限"],a:2,s:2},
+{type:"single",q:"Redis中的\"SCAN\"命令用于做什么",o:["管理并发访问","执行全文搜索","扫描数据库中的所有键","进行内存管理"],a:2,s:2},
+{type:"single",q:"在Redis配置文件中，用于设置监听地址的配置项是",o:["bind","port","listen","address"],a:0,s:2},
+{type:"single",q:"在Redis配置文件中，用于设置密码的配置项是",o:["password","requirepass","auth","authenticate"],a:1,s:2},
+{type:"single",q:"MySQL主从架构的主要目的是",o:["实现数据库的高可用性和容错性","简化数据库的管理和维护","提高数据库的安全性","提高数据库的性能"],a:0,s:2},
+{type:"multi",q:"如下那些是数据库Mysql的特点",o:["支持结构化数据存储","支持跨平台","提供了强大的数据完整性和一致性的机制","开源免费"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"在MySQL读写分离架构中（主从架构），如下描述正确的是",o:["读库处理读请求","主库处理写请求","主库和从库可以进行故障切换","从库可以有多个，采用负载均衡技术实现轮询访问"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"如下关于腾讯云数据库Mysql产品特性描述正确的是",o:["定时冷备、增量备份、实时热备保障数据可靠","基于TXSQL内核开发","加密、审计等内核支持的特性","丰富的数据库管理能力：备份、回档、监控、升级、迁移等"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"如下关于数据库Mysql OOM的描述正确的是",o:["cpu 或 硬盘资源不足也会导致oom","配置不当会导致出现oom","oom是指out of memory","oom就是内存资源不够用了"],a:[1, 2, 3],s:2},
+{type:"multi",q:"下面关于存储引擎的描述正确的是（）",o:["使用SHOW ENGINES语句可以查看系统支持的数据库引擎类型","不同的存储引擎所具备的能力也有所不同","存储引擎就是存储数据、为存储的数据建立索引和更新、查询数据等技术的实现方法","MySQL数据库提供了多种存储引擎类型，用户可以根据不同的需求为数据表选择不同的存储引擎"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"MySQL可以存储的的数据类型有那些",o:["数值类型","文本类型","日期和时间类型","字符串类型"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"以下关于数据库Mysql说法正确的是",o:["MySQL服务的安装路径可以修改","MySQL数据文件的存放位置可以修改","MySQL数据库的访问端口可以修改","MySQL的最大连接数可以修改"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于远程连接数据库MySQL的来源配置，正确的是",o:["%","","192.168.1.2","all"],a:[0, 2],s:2},
+{type:"multi",q:"腾讯云数据库MySQL主备复制（冷备）有哪几种复制方式",o:["半同步","异步","强同步","完全同步"],a:[0, 1, 2],s:2},
+{type:"multi",q:"如下那些是腾讯云数据库Mysql提供的架构能力",o:["数据缓存加速架构","读写分离架构","异地灾备架构","主备架构"],a:[0, 1, 2, 3],s:2}
+];
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+function startTimer(){setInterval(()=>{if(answered)return;timerSec++;const m=String(Math.floor(timerSec/60)).padStart(2,'0');const s=String(timerSec%60).padStart(2,'0');document.getElementById('timer').textContent=`⏱ ${m}:${s}`},1000)}
+function initGrid(){let h='';for(let i=0;i<TOTAL;i++)h+=`<button id="qb${i}" onclick="goTo(${i})">${i+1}</button>`;document.getElementById('qGrid').innerHTML=h;document.getElementById('totalCount').textContent=TOTAL}
+function renderQ(){const item=examData[currentQ];const isS=item.type==='single';const tt=isS?'单选题':'多选题';document.getElementById('qHeader').innerHTML=`<span class="q-type">${tt}</span><span class="q-score">(${item.s}分)</span>`;document.getElementById('qText').textContent=item.q;const ca=isS?[item.a]:item.a;const ua=userAnswers[currentQ]||[];const isC=answered&&ua.length===ca.length&&ua.every(v=>ca.includes(v));let oh='';item.o.forEach((opt,j)=>{const sel=ua.includes(j);const isA=ca.includes(j);let cls=sel?' selected':'';if(answered){if(isA&&sel)cls=' show-correct';else if(!isA&&sel)cls=' show-wrong';else if(isA&&!sel)cls=' show-missed';else cls=''}oh+=`<div class="option-item${cls}" ${answered?'':`onclick="selectOption(${j})"`}><div class="opt-label">${LABELS[j]}</div><div class="opt-text">${opt}</div></div>`});document.getElementById('qOptions').innerHTML=oh;const rv=document.getElementById('answerReveal');if(answered){rv.style.display='block';const at=ca.map(a=>LABELS[a]).join(',');if(isC){rv.className='answer-reveal correct';rv.innerHTML=`✅ 回答正确 | 正确答案：${at}`}else{rv.className='answer-reveal wrong';const yt=ua.length>0?ua.map(a=>LABELS[a]).join(','):'未作答';rv.innerHTML=`❌ 回答错误 | 你的答案：${yt} | 正确答案：${at}`}}else{rv.style.display='none'}document.querySelectorAll('.q-grid button').forEach((b,i)=>{b.classList.remove('active');if(i===currentQ)b.classList.add('active')})}
+function selectOption(idx){if(answered)return;const item=examData[currentQ];if(item.type==='single'){userAnswers[currentQ]=[idx]}else{if(!userAnswers[currentQ])userAnswers[currentQ]=[];const p=userAnswers[currentQ].indexOf(idx);if(p>-1)userAnswers[currentQ].splice(p,1);else userAnswers[currentQ].push(idx)}renderQ();updateProgress()}
+function updateProgress(){let done=0;for(let i=0;i<TOTAL;i++){const b=document.getElementById(`qb${i}`);if(userAnswers[i]&&userAnswers[i].length>0){done++;b.classList.add('done')}else{b.classList.remove('done')}}document.getElementById('doneCount').textContent=done;document.getElementById('progressFill').style.width=(done/TOTAL*100)+'%'}
+function goTo(idx){currentQ=idx;renderQ()}
+function prevQ(){if(currentQ>0){currentQ--;renderQ()}}
+function nextQ(){if(currentQ<TOTAL-1){currentQ++;renderQ()}}
+function submitExam(){if(answered)return;let ua=0;for(let i=0;i<TOTAL;i++){if(!userAnswers[i]||userAnswers[i].length===0)ua++}if(ua>0&&!confirm(`还有 ${ua} 题未作答，确定交卷吗？`))return;let score=0,correct=0,wrong=0;examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));if(ok){score+=item.s;correct++}else{wrong++}});examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));const b=document.getElementById(`qb${i}`);b.classList.remove('done');b.classList.add(ok?'correct':'wrong')});document.getElementById('resultPanel').style.display='none';document.getElementById('questionCard').style.display='block';const mx=examData.reduce((s,t)=>s+t.s,0);document.querySelector('.top-bar .title').innerHTML=`历史练习·云数据库 <span style="font-size:13px;font-weight:400;color:${score>=mx*0.6?'#4caf50':'#f44336'}">| 得分：${score}/${mx}（答对${correct}题，答错${wrong}题）</span>`;document.querySelector('.sidebar-footer').innerHTML=`<div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div><div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>`;answered=true;currentQ=0;renderQ()}
+document.addEventListener('keydown',e=>{if(answered)return;if(e.key==='ArrowLeft')prevQ();if(e.key==='ArrowRight')nextQ()});
+initGrid();renderQ();startTimer();
+let pendingLeaveUrl=null;
+function beforeUnloadHandler(e){if(answered)return;e.preventDefault();e.returnValue=''}
+window.addEventListener('beforeunload',beforeUnloadHandler);
+document.addEventListener('click',function(e){if(answered)return;const link=e.target.closest('a[href]');if(link&&!link.href.startsWith('javascript:')){e.preventDefault();pendingLeaveUrl=link.href;document.getElementById('leaveModal').classList.add('show')}});
+function interceptReload(){if(answered){location.reload();return}pendingLeaveUrl=null;document.getElementById('leaveModal').classList.add('show')}
+function closeLeaveModal(){document.getElementById('leaveModal').classList.remove('show');pendingLeaveUrl=null}
+function confirmLeave(){window.removeEventListener('beforeunload',beforeUnloadHandler);if(pendingLeaveUrl){location.href=pendingLeaveUrl}else{location.reload()}}
+</script>
+</body>
+</html>

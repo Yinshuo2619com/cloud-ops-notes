@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史练习·云网络</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f0f2f5; color: #333; min-height: 100vh; }
+        .top-bar { background: #fff; border-bottom: 1px solid #e8e8e8; padding: 0 24px; height: 52px; display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
+        .top-bar .title { font-size: 16px; font-weight: 700; color: #333; }
+        .top-bar .actions { display: flex; align-items: center; gap: 16px; font-size: 13px; color: #666; }
+        .top-bar .actions button { background: none; border: none; cursor: pointer; color: #666; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+        .top-bar .actions button:hover { color: #1a73e8; }
+        .top-bar .timer { color: #1a73e8; font-weight: 600; }
+        .btn-submit-top { background: #1a73e8 !important; color: #fff !important; padding: 6px 20px; border-radius: 6px; font-size: 13px; }
+        .btn-submit-top:hover { background: #1557b0 !important; }
+        .main { display: flex; margin-top: 52px; min-height: calc(100vh - 52px); }
+        .sidebar { width: 240px; background: #fff; border-right: 1px solid #e8e8e8; position: fixed; top: 52px; bottom: 0; left: 0; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header .label { font-size: 15px; font-weight: 700; color: #333; }
+        .sidebar-header .icon { color: #888; cursor: pointer; font-size: 18px; }
+        .progress-box { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
+        .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: #666; margin-bottom: 8px; }
+        .progress-info .count { color: #1a73e8; font-weight: 600; }
+        .progress-bar { height: 6px; background: #e8e8e8; border-radius: 3px; overflow: hidden; }
+        .progress-bar .fill { height: 100%; background: #4caf50; border-radius: 3px; transition: width 0.3s; }
+        .q-numbers { flex: 1; overflow-y: auto; padding: 12px 16px; }
+        .q-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+        .q-grid button { width: 100%; aspect-ratio: 1; border: 1px solid #ddd; border-radius: 4px; background: #fff; cursor: pointer; font-size: 12px; color: #666; transition: all 0.15s; display: flex; align-items: center; justify-content: center; }
+        .q-grid button:hover { border-color: #1a73e8; color: #1a73e8; }
+        .q-grid button.active { border: 2px solid #1a73e8; color: #1a73e8; font-weight: 700; }
+        .q-grid button.done { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        .q-grid button.done:hover { background: #1557b0; }
+        .q-grid button.correct { background: #4caf50; color: #fff; border-color: #4caf50; }
+        .q-grid button.wrong { background: #f44336; color: #fff; border-color: #f44336; }
+        .option-item.show-correct { border-color: #4caf50; background: #e8f5e9; }
+        .option-item.show-correct .opt-label { border-color: #4caf50; background: #4caf50; color: #fff; }
+        .option-item.show-wrong { border-color: #f44336; background: #ffebee; }
+        .option-item.show-wrong .opt-label { border-color: #f44336; background: #f44336; color: #fff; }
+        .option-item.show-missed { border-color: #ff9800; background: #fff3e0; }
+        .option-item.show-missed .opt-label { border-color: #ff9800; background: #ff9800; color: #fff; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; gap: 14px; font-size: 12px; color: #888; }
+        .legend { display: flex; align-items: center; gap: 4px; }
+        .legend .dot { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #ddd; }
+        .legend .dot.done { background: #1a73e8; border-color: #1a73e8; }
+        .content { flex: 1; margin-left: 240px; padding: 24px 32px; }
+        .question-card { background: #fff; border-radius: 10px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); min-height: 50vh; }
+        .q-header { font-size: 14px; color: #1a73e8; margin-bottom: 16px; font-weight: 600; }
+        .q-header .q-type { margin-right: 8px; }
+        .q-header .q-score { color: #999; font-weight: 400; }
+        .q-text { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #333; }
+        .options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+        .option-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border: 1px solid #e8e8e8; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .option-item:hover { border-color: #1a73e8; background: #f8faff; }
+        .option-item.selected { border-color: #1a73e8; background: #eef3ff; }
+        .option-item .opt-label { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #888; flex-shrink: 0; transition: all 0.2s; }
+        .option-item.selected .opt-label { border-color: #1a73e8; background: #1a73e8; color: #fff; }
+        .option-item .opt-text { font-size: 14px; line-height: 1.6; padding-top: 3px; }
+        .q-nav { display: flex; gap: 12px; }
+        .q-nav button { padding: 10px 28px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .btn-prev { background: #fff; border: 1px solid #ddd; color: #666; }
+        .btn-prev:hover { border-color: #1a73e8; color: #1a73e8; }
+        .btn-next { background: #fff; border: 1px solid #1a73e8; color: #1a73e8; }
+        .btn-next:hover { background: #1a73e8; color: #fff; }
+        .answer-reveal { display: none; margin-top: 20px; padding: 14px 16px; border-radius: 8px; font-size: 13px; }
+        .answer-reveal.correct { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .answer-reveal.wrong { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .result-panel { display: none; background: #fff; border-radius: 10px; padding: 40px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.06); margin-top: 20px; }
+        .result-panel .score { font-size: 56px; font-weight: 700; color: #1a73e8; }
+        .result-panel .score.fail { color: #c62828; }
+        .result-panel .detail { margin-top: 12px; color: #666; font-size: 14px; line-height: 1.8; }
+        .leave-modal-mask { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9999; align-items: center; justify-content: center; }
+        .leave-modal-mask.show { display: flex; }
+        .leave-modal { background: #fff; border-radius: 12px; padding: 32px 36px; width: 380px; max-width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.18); text-align: center; }
+        .leave-modal .modal-icon { font-size: 40px; margin-bottom: 12px; }
+        .leave-modal .modal-title { font-size: 17px; font-weight: 700; color: #333; margin-bottom: 8px; }
+        .leave-modal .modal-msg { font-size: 13px; color: #888; line-height: 1.6; margin-bottom: 24px; }
+        .leave-modal .modal-btns { display: flex; gap: 12px; justify-content: center; }
+        .leave-modal .modal-btns button { flex: 1; padding: 10px 0; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .leave-modal .btn-cancel { background: #f5f5f5; color: #666; }
+        .leave-modal .btn-cancel:hover { background: #e8e8e8; }
+        .leave-modal .btn-leave { background: #f44336; color: #fff; }
+        .leave-modal .btn-leave:hover { background: #d32f2f; }
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar-header .label, .progress-box, .sidebar-footer .legend span { display: none; }
+            .q-grid { grid-template-columns: repeat(2, 1fr); }
+            .content { margin-left: 60px; padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="top-bar">
+    <div class="title">历史练习·云网络</div>
+    <div class="actions">
+        <button onclick="interceptReload()">🔄 刷新</button>
+        <span class="timer" id="timer">⏱ 00:00</span>
+        <button class="btn-submit-top" onclick="submitExam()">交卷</button>
+    </div>
+</div>
+<div class="main">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <span class="label">答题卡</span>
+            <span class="icon" onclick="toggleSidebar()">☰</span>
+        </div>
+        <div class="progress-box">
+            <div class="progress-info">
+                <span>进度</span>
+                <span class="count"><span id="doneCount">0</span>/<span id="totalCount">0</span></span>
+            </div>
+            <div class="progress-bar"><div class="fill" id="progressFill" style="width:0%"></div></div>
+        </div>
+        <div class="q-numbers"><div class="q-grid" id="qGrid"></div></div>
+        <div class="sidebar-footer">
+            <div class="legend"><div class="dot done"></div><span>已答</span></div>
+            <div class="legend"><div class="dot"></div><span>未答</span></div>
+        </div>
+    </div>
+    <div class="content">
+        <div class="question-card" id="questionCard">
+            <div class="q-header" id="qHeader"></div>
+            <div class="q-text" id="qText"></div>
+            <div class="options" id="qOptions"></div>
+            <div class="q-nav">
+                <button class="btn-prev" onclick="prevQ()">上一题</button>
+                <button class="btn-next" onclick="nextQ()">下一题</button>
+            </div>
+            <div class="answer-reveal" id="answerReveal"></div>
+        </div>
+        <div class="result-panel" id="resultPanel">
+            <div>考试成绩</div>
+            <div class="score" id="score">0</div>
+            <div class="detail" id="detail"></div>
+        </div>
+    </div>
+</div>
+<div class="leave-modal-mask" id="leaveModal">
+    <div class="leave-modal">
+        <div class="modal-icon">⚠️</div>
+        <div class="modal-title">确认离开考试？</div>
+        <div class="modal-msg">当前考试进度将不会保存，确定要离开吗？</div>
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeLeaveModal()">继续考试</button>
+            <button class="btn-leave" onclick="confirmLeave()">确认离开</button>
+        </div>
+    </div>
+</div>
+<script>
+const examData = [
+{type:"single",q:"172.22.33.44/16 的网络位是",o:["172.22","172.22.33","172","172.22.33.44"],a:0,s:2},
+{type:"single",q:"网络传输的最小单元是",o:["Byte","MB","bit","KB"],a:2,s:2},
+{type:"single",q:"英文字母 a 占用多大硬盘存储空间",o:["1 bit","1 Byte","1 KByte","2 Byte"],a:1,s:2},
+{type:"single",q:"1个IPv6地址是多少个字节",o:["32","8","16","4"],a:2,s:2},
+{type:"single",q:"IPv4地址的范围是",o:["1.1.1.1-255.255.255.255","1.1.1.1-256.256.256.256","0.0.0.0-256.256.256.256","0.0.0.0-255.255.255.255"],a:3,s:2},
+{type:"single",q:"192.168.10.5/24 的主机位是",o:["5","168","10","192"],a:0,s:2},
+{type:"single",q:"255.255.0.0代表多少位掩码",o:["8","32","24","16"],a:3,s:2},
+{type:"single",q:"1个IPv4地址是多少比特位",o:["64","128","32","16"],a:2,s:2},
+{type:"single",q:"192.168.0.0/16 可以划分多少个24位掩码的网段？",o:["512","256","128","1024"],a:1,s:2},
+{type:"single",q:"IPV4地址集合如何表示",o:["0.0.0.0","0.0.0.0/0","255.255.255.255","255.255.255.255/0"],a:1,s:2},
+{type:"single",q:"如下关于负载均衡的业务场景中，描述错误的是",o:["负载均衡就是指Lvs负载均衡和Nginx负载均衡","Nginx负载均衡只是诸多负载均衡产品中的一种具体体现而已","负载均衡解决了因单节点故障而导致业务不可用的问题","负载均衡可以简单理解为将客户端的请求按照设定的规则转发到对应的业务服务器"],a:0,s:2},
+{type:"single",q:"如下关于腾讯云VPC描述错误的是",o:["VPC的子网网关不可以修改","VPC可以自定义网段","VPC创建成功后还可以修改网段","VPC是基于虚拟化软件的虚拟交换机自研实现"],a:2,s:2},
+{type:"single",q:"IP地址工作在OSI七层模型中的哪层？",o:["4","7","2","3"],a:3,s:2},
+{type:"single",q:"如下哪个IPV6地址是正确的",o:["2404:FFEE:E80F:00:0E44","2404:FFEE::0E4N","2404:0::0E4D","2404:FFEE:4602:0:0:0E44:00EE"],a:2,s:2},
+{type:"single",q:"关于172.32.0.0/24 和 172.32.30.0/24 描述正确的是",o:["都是腾讯云VPC可以自定义设置的网段","都是内网网段","不是同一个网段","是同一个网段"],a:2,s:2},
+{type:"single",q:"如下关于掩码描述错误的是",o:["掩码可以用来做子网划分","掩码确定了网段内网关的地址","掩码确定了网段内IP地址的数量","掩码可以区分网络ID和主机ID"],a:1,s:2},
+{type:"single",q:"阿拉伯数字 1 的二进制是",o:["0000 0010","0000 0000","0000 0001","1000 0000"],a:2,s:2},
+{type:"single",q:"OSI 7层模型排序正确的是",o:["物理-网络-传输-数据链路-会话-表示-应用","物理-网络-数据链路-传输-会话-表示-应用","物理-数据链路-网络-传输-会话-表示-应用","物理-数据链路-传输-网络-会话-表示-应用"],a:2,s:2},
+{type:"single",q:"腾讯云CLB后端绑定两台云服务器，分别为RSA和RSB，RSA权重20和RSB权重10，采用加权轮询方式，假如CLB接收到60个访问请求，RSA理论上会收到多少个访问请求",o:["50","20","40","30"],a:2,s:2},
+{type:"single",q:"腾讯云CLB的哪项功能可以实现配置多个SSL证书",o:["转发方式","SNI","健康检查","http2.0"],a:1,s:2},
+{type:"single",q:"10.0.8.0/24 这个网段一共有多少个IP地址",o:["2的8次方","2的32次方","2的16次方","2的24次方"],a:0,s:2},
+{type:"single",q:"OSI七层模型里的第4层是",o:["网络层","数据链路层","应用层","传输层"],a:3,s:2},
+{type:"single",q:"数据存储的最小单元是",o:["Byte","MB","bit","KB"],a:0,s:2},
+{type:"single",q:"在腾讯云CLB的网站业务场景中，客户端访问网站出现504错误，其原因可能是",o:["CLB后端的CVM业务故障无法访问","CLB监听器配置错误","CLB的重定向配置错误","CLB监听器的转发规则配置错误"],a:0,s:2},
+{type:"single",q:"24位掩码还可以如何表示",o:["255.255.255.0","255.255.255.255","255.0.0.0","255.255.0.0"],a:0,s:2},
+{type:"single",q:"腾讯云CLB健康检查的主要作用是什么",o:["检查腾讯云负载均衡的监听器工作是否正常","检查腾讯云负载均衡所属的VPC工作是否正常","检查后端的腾讯云服务器工作是否正常","检查腾讯云负载均衡是否工作正常"],a:2,s:2},
+{type:"single",q:"腾讯云CLB的SSL证书应该选择那种？",o:["apache","tomcat","nginx","IIS"],a:2,s:2},
+{type:"single",q:"十六进制的表示范围是",o:["0和1","1-9，a-g","0-9，a-f","1-10，a-f"],a:2,s:2},
+{type:"single",q:"二进制10000001转换为十进制数字是？",o:["128","129","127","130"],a:1,s:2},
+{type:"single",q:"腾讯云CLB 7层是基于",o:["TGW","STGW","Keepalived","HaProxy"],a:1,s:2},
+{type:"multi",q:"如下哪些是腾讯云CLB的优势",o:["可用于业务容灾","相比于自建负载均衡，成本更低，稳定性更好","可用于提高业务访问并发量","采用集群化部署，具备高可用性"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"关于腾讯云CLB的描述中，如下哪些是正确的",o:["7层可以实现基于域名规则进行转发","7层性能一般会优于4层","4层性能一般会优于7层","7层可以实现基于网站路径进行转发"],a:[0, 2, 3],s:2},
+{type:"multi",q:"如下关于负载均衡描述正确的是",o:["负载均衡只能用于对网站业务场景，其他业务场景都不适用","Nginx负载均衡是通过Nginx的反向代理功能实现的","LVS是一种负载均衡的具体实现","HaProxy是一种负载均衡的具体实现"],a:[1, 2, 3],s:2},
+{type:"multi",q:"腾讯云CLB的HTTP健康检查功能中，支持监听器向后端CVM发起哪几种请求方式",o:["GET","POST","HEAD","PUT"],a:[0, 2],s:2},
+{type:"multi",q:"腾讯云CLB 7层支持的协议有",o:["https","TCP","UDP","http"],a:[0, 3],s:2},
+{type:"multi",q:"腾讯云VPC网络特点包含以下哪些？",o:["可视化管理","弹性扩展","多维度安全","完全隔离"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云CLB的均衡方式有",o:["自由转发","加权轮询","加权最小连接数","IP_HASH"],a:[1, 2, 3],s:2},
+{type:"multi",q:"出于安全因素考虑，如下那些TCP协议端口被运营商拦截了",o:["139","137","138","445"],a:[0, 1, 2, 3],s:2},
+{type:"multi",q:"腾讯云CLB的个性化配置是做什么用的",o:["可以设置客户端上传到后端CVM的文件大小","类似Nginx的配置文件，用于设置修改CLB的配置参数","可以设置从CLB转发到后端CVM的访问超时时间","可以提高CLB的性能"],a:[0, 1, 2],s:2},
+{type:"multi",q:"如下哪些是内网网段",o:["192.168.0.0/16","172.32.0.0/16","10.0.0.0/8","172.16.0.0/12"],a:[0, 2, 3],s:2}
+];
+const LABELS = ['A','B','C','D'];
+let currentQ = 0;
+let userAnswers = new Array(examData.length).fill(null);
+let answered = false;
+let timerSec = 0;
+const TOTAL = examData.length;
+function startTimer(){setInterval(()=>{if(answered)return;timerSec++;const m=String(Math.floor(timerSec/60)).padStart(2,'0');const s=String(timerSec%60).padStart(2,'0');document.getElementById('timer').textContent=`⏱ ${m}:${s}`},1000)}
+function initGrid(){let h='';for(let i=0;i<TOTAL;i++)h+=`<button id="qb${i}" onclick="goTo(${i})">${i+1}</button>`;document.getElementById('qGrid').innerHTML=h;document.getElementById('totalCount').textContent=TOTAL}
+function renderQ(){const item=examData[currentQ];const isS=item.type==='single';const tt=isS?'单选题':'多选题';document.getElementById('qHeader').innerHTML=`<span class="q-type">${tt}</span><span class="q-score">(${item.s}分)</span>`;document.getElementById('qText').textContent=item.q;const ca=isS?[item.a]:item.a;const ua=userAnswers[currentQ]||[];const isC=answered&&ua.length===ca.length&&ua.every(v=>ca.includes(v));let oh='';item.o.forEach((opt,j)=>{const sel=ua.includes(j);const isA=ca.includes(j);let cls=sel?' selected':'';if(answered){if(isA&&sel)cls=' show-correct';else if(!isA&&sel)cls=' show-wrong';else if(isA&&!sel)cls=' show-missed';else cls=''}oh+=`<div class="option-item${cls}" ${answered?'':`onclick="selectOption(${j})"`}><div class="opt-label">${LABELS[j]}</div><div class="opt-text">${opt}</div></div>`});document.getElementById('qOptions').innerHTML=oh;const rv=document.getElementById('answerReveal');if(answered){rv.style.display='block';const at=ca.map(a=>LABELS[a]).join(',');if(isC){rv.className='answer-reveal correct';rv.innerHTML=`✅ 回答正确 | 正确答案：${at}`}else{rv.className='answer-reveal wrong';const yt=ua.length>0?ua.map(a=>LABELS[a]).join(','):'未作答';rv.innerHTML=`❌ 回答错误 | 你的答案：${yt} | 正确答案：${at}`}}else{rv.style.display='none'}document.querySelectorAll('.q-grid button').forEach((b,i)=>{b.classList.remove('active');if(i===currentQ)b.classList.add('active')})}
+function selectOption(idx){if(answered)return;const item=examData[currentQ];if(item.type==='single'){userAnswers[currentQ]=[idx]}else{if(!userAnswers[currentQ])userAnswers[currentQ]=[];const p=userAnswers[currentQ].indexOf(idx);if(p>-1)userAnswers[currentQ].splice(p,1);else userAnswers[currentQ].push(idx)}renderQ();updateProgress()}
+function updateProgress(){let done=0;for(let i=0;i<TOTAL;i++){const b=document.getElementById(`qb${i}`);if(userAnswers[i]&&userAnswers[i].length>0){done++;b.classList.add('done')}else{b.classList.remove('done')}}document.getElementById('doneCount').textContent=done;document.getElementById('progressFill').style.width=(done/TOTAL*100)+'%'}
+function goTo(idx){currentQ=idx;renderQ()}
+function prevQ(){if(currentQ>0){currentQ--;renderQ()}}
+function nextQ(){if(currentQ<TOTAL-1){currentQ++;renderQ()}}
+function submitExam(){if(answered)return;let ua=0;for(let i=0;i<TOTAL;i++){if(!userAnswers[i]||userAnswers[i].length===0)ua++}if(ua>0&&!confirm(`还有 ${ua} 题未作答，确定交卷吗？`))return;let score=0,correct=0,wrong=0;examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));if(ok){score+=item.s;correct++}else{wrong++}});examData.forEach((item,i)=>{const u=userAnswers[i]||[];const c=item.type==='single'?[item.a]:item.a;const ok=u.length===c.length&&u.every(v=>c.includes(v));const b=document.getElementById(`qb${i}`);b.classList.remove('done');b.classList.add(ok?'correct':'wrong')});document.getElementById('resultPanel').style.display='none';document.getElementById('questionCard').style.display='block';const mx=examData.reduce((s,t)=>s+t.s,0);document.querySelector('.top-bar .title').innerHTML=`历史练习·云网络 <span style="font-size:13px;font-weight:400;color:${score>=mx*0.6?'#4caf50':'#f44336'}">| 得分：${score}/${mx}（答对${correct}题，答错${wrong}题）</span>`;document.querySelector('.sidebar-footer').innerHTML=`<div class="legend"><div class="dot" style="background:#4caf50;border-color:#4caf50"></div><span>答对</span></div><div class="legend"><div class="dot" style="background:#f44336;border-color:#f44336"></div><span>答错</span></div>`;answered=true;currentQ=0;renderQ()}
+document.addEventListener('keydown',e=>{if(answered)return;if(e.key==='ArrowLeft')prevQ();if(e.key==='ArrowRight')nextQ()});
+initGrid();renderQ();startTimer();
+let pendingLeaveUrl=null;
+function beforeUnloadHandler(e){if(answered)return;e.preventDefault();e.returnValue=''}
+window.addEventListener('beforeunload',beforeUnloadHandler);
+document.addEventListener('click',function(e){if(answered)return;const link=e.target.closest('a[href]');if(link&&!link.href.startsWith('javascript:')){e.preventDefault();pendingLeaveUrl=link.href;document.getElementById('leaveModal').classList.add('show')}});
+function interceptReload(){if(answered){location.reload();return}pendingLeaveUrl=null;document.getElementById('leaveModal').classList.add('show')}
+function closeLeaveModal(){document.getElementById('leaveModal').classList.remove('show');pendingLeaveUrl=null}
+function confirmLeave(){window.removeEventListener('beforeunload',beforeUnloadHandler);if(pendingLeaveUrl){location.href=pendingLeaveUrl}else{location.reload()}}
+</script>
+</body>
+</html>
