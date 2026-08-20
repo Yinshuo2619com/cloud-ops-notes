@@ -270,7 +270,7 @@ lower_case_table_names参数如果设置为0，表名将按指定存储，区分
 查大写的表名
 select table_schema,table_name from information_schema.tables where table_schema not in("mysql","information_schema") and (md5(table_name)<>md5(lower(table_name)) or md5(table_schema)<>md5(lower(table_schema)));
 修改sql_mode
-https://lexiangla.com/docs/cbfe3f1cf9a811eaa3ae0a58ac13760c?company_from=385abcf0dd9d11e8a11752540005f435
+https://example.com/docs/mysql-optimization-guide
 修改 innodb_strict_mode
 InnoDB表的默认限制列是1017列（从mysql 5.6.9开始）；Mysql的表的行最大默认是65535 Bytes；除此之外，CDB for Mysql默认innodb_page_size为16k，InnoDB表（stored locally in database page）最大行不超过其值一半即8126bytes。
 a.修改表的语句，使其符合行大小限制，例如列格式为TEXT or BLOB

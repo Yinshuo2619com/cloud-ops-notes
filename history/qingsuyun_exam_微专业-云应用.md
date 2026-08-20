@@ -1,6 +1,6 @@
 # 微专业-云应用 考试题库
 
-> 来源：https://www.qingsuyun.com/h5/p/exam/answer?answerId=d93b3fd4efb7494db45ec2872758bb61&factoryCode=220999&paperType=1
+> 来源：青书云考试平台
 > 共40题：30道单选题 + 10道多选题
 
 ---

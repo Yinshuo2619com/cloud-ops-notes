@@ -79,26 +79,26 @@ Redis 操作
 其他Redis练习
 # 创建一个新的用户并设置密码（需Redis6.0及以上版本支持）
 acl setuser username on >password +@all
-如：acl setuser admin on >51redis@yyoe.cn +@all
+如：acl setuser admin on >YourRedis@Password123 +@all
 username 是你想创建的用户名。
 password 是分配给该用户的密码。
 +@all 表示赋予该用户所有权限。
 # 用户创建后，可以使用以下命令进行身份验
-auth admin 51redis@yyoe.cn
+auth admin YourRedis@Password123
 # info stats：获取统计信息# 包含了缓存的命中和未命中次数
 #（keyspace_hits / keyspace_misses）
 # 或系统命令：
-redis-cli -a 51redis@yyoe.cn info stats | grep keyspace_hits
-redis-cli -a 51redis@yyoe.cn info stats | grep keyspace_misses
+redis-cli -a YourRedis@Password123 info stats | grep keyspace_hits
+redis-cli -a YourRedis@Password123 info stats | grep keyspace_misses
 # Redis默认空密码，首次登录后需设置密码
 redis-cli
-config set requirepass 51redis@yyoe.cn
+config set requirepass YourRedis@Password123
 config rewrite
 config get requirepass
 quit
 # 使用密码登录（推荐第一种）
-redis-cliauth 51redis@yyoe.cn
-或redis-cli -a 51redis@yyoe.cn
+redis-cliauth YourRedis@Password123
+或redis-cli -a YourRedis@Password123
 # Redis基础练习
 help
 set name zhangsan
@@ -128,7 +128,7 @@ vi wp-config.php
 /*redis config*/
 define('WP_REDIS_HOST', '127.0.0.1');
 define('WP_REDIS_PORT', '6379');
-define('WP_REDIS_PASSWORD', '51redis@yyoe.cn');
+define('WP_REDIS_PASSWORD', 'YourRedis@Password123');
 # 如下权限设置，放到最后即可
 define("FS_METHOD", "direct");
 define("FS_CHMOD_DIR", 0777);
